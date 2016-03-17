@@ -1228,8 +1228,11 @@ void Score::upDown(bool up, UpDownMode mode)
                   case StaffGroup::PERCUSSION:
                         {
                         const Drumset* ds = part->instrument()->drumset();
-                        if (ds)
+                        if (ds) {
                               newPitch = up ? ds->prevPitch(pitch) : ds->nextPitch(pitch);
+                              newTpc1 = pitch2tpc(newPitch, Key::C, Prefer::NEAREST);
+                              newTpc2 = newTpc1;
+                              }
                         }
                         break;
                   case StaffGroup::TAB:
@@ -2655,7 +2658,7 @@ void Score::cmdExplode()
             if (cr) {
                   XmlReader e(srcSelection.mimeData());
                   e.setPasteMode(true);
-                  if (!pasteStaff(e, cr->segment(), cr->staffIdx()))
+                  if (pasteStaff(e, cr->segment(), cr->staffIdx()) != PasteStatus::PS_NO_ERROR)
                         qDebug("explode: paste failed");
                   }
             }

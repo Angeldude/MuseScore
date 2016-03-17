@@ -2220,7 +2220,6 @@ bool Score::layoutSystem(qreal& minWidth, qreal systemWidth, bool isFirstSystem,
             bool hasCourtesy;
             qreal cautionaryW = 0.0;
             qreal ww          = 0.0;
-            bool systemWasNotEmpty = !system->measures().isEmpty();
 
             if (curMeasure->type() == Element::Type::HBOX) {
                   ww = point(static_cast<Box*>(curMeasure)->boxWidth());
@@ -2246,7 +2245,6 @@ bool Score::layoutSystem(qreal& minWidth, qreal systemWidth, bool isFirstSystem,
                   if (isFirstMeasure) {
                         firstMeasure = m;
                         addSystemHeader(m, isFirstSystem);
-                        system->measures().append(curMeasure);    // append measure to system before minWidth2() performs courtesy clef layout calculation
                         ww = m->minWidth2();
                         }
                   else
@@ -2285,10 +2283,12 @@ bool Score::layoutSystem(qreal& minWidth, qreal systemWidth, bool isFirstSystem,
 
                   if (ww < minMeasureWidth)
                         ww = minMeasureWidth;
+                  isFirstMeasure = false;
                   }
 
             // collect at least one measure
-            if (systemWasNotEmpty && (minWidth + ww > systemWidth)) {
+            bool empty = system->measures().isEmpty();
+            if (!empty && (minWidth + ww > systemWidth)) {
                   curMeasure->setSystem(oldSystem);
                   continueFlag = false;
                   break;
@@ -2297,11 +2297,7 @@ bool Score::layoutSystem(qreal& minWidth, qreal systemWidth, bool isFirstSystem,
             if (curMeasure->type() == Element::Type::MEASURE)
                   lastMeasure = static_cast<Measure*>(curMeasure);
 
-            // append measure if did not already append measure
-            if (curMeasure->type() == Element::Type::MEASURE && isFirstMeasure)
-                  isFirstMeasure = false;
-            else
-                  system->measures().append(curMeasure);
+            system->measures().append(curMeasure);
 
             Element::Type nt;
             if (_showVBox)
@@ -2392,6 +2388,7 @@ void Score::hideEmptyStaves(System* system, bool isFirstSystem)
                               }
                         }
                   // check if notes moved into this staff
+                  // also check whether all staves of instrument are empty
                   Part* part = staff->part();
                   int n = part->nstaves();
                   if (hideStaff && (n > 1)) {
@@ -2399,10 +2396,14 @@ void Score::hideEmptyStaves(System* system, bool isFirstSystem)
                         for (int i = 0; i < part->nstaves(); ++i) {
                               int st = idx + i;
 
-                              foreach(MeasureBase* mb, system->measures()) {
+                              for (MeasureBase* mb : system->measures()) {
                                     if (mb->type() != Element::Type::MEASURE)
                                           continue;
                                     Measure* m = static_cast<Measure*>(mb);
+                                    if (staff->hideWhenEmpty() == Staff::HideMode::INSTRUMENT && !m->isMeasureRest(st)) {
+                                          hideStaff = false;
+                                          break;
+                                          }
                                     for (Segment* s = m->first(Segment::Type::ChordRest); s; s = s->next(Segment::Type::ChordRest)) {
                                           for (int voice = 0; voice < VOICES; ++voice) {
                                                 ChordRest* cr = static_cast<ChordRest*>(s->element(st * VOICES + voice));

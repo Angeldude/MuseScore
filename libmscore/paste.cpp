@@ -73,7 +73,7 @@ static void transposeChord(Chord* c, Interval srcTranspose, int tick)
 //    return false if paste fails
 //---------------------------------------------------------
 
-bool Score::pasteStaff(XmlReader& e, Segment* dst, int dstStaff)
+PasteStatus Score::pasteStaff(XmlReader& e, Segment* dst, int dstStaff)
       {
       Q_ASSERT(dst->segmentType() == Segment::Type::ChordRest);
       QList<Chord*> graceNotes;
@@ -156,6 +156,11 @@ bool Score::pasteStaff(XmlReader& e, Segment* dst, int dstStaff)
                               tuplet->setTrack(e.track());
                               tuplet->read(e);
                               int tick = e.tick();
+                              // no paste into local time signature
+                              if (staff(dstStaffIdx)->isLocalTimeSignature(tick)) {
+                                    qDebug("paste into local time signature");
+                                    return PasteStatus::DEST_LOCAL_TIME_SIGNATURE;
+                                    }
                               Measure* measure = tick2measure(tick);
                               tuplet->setParent(measure);
                               tuplet->setTick(tick);
@@ -164,7 +169,7 @@ bool Score::pasteStaff(XmlReader& e, Segment* dst, int dstStaff)
                               if (rticks < ticks) {
                                     qDebug("tuplet does not fit in measure");
                                     delete tuplet;
-                                    return false;
+                                    return PasteStatus::TUPLET_CROSSES_BAR;
                                     }
                               e.addTuplet(tuplet);
                               }
@@ -174,6 +179,11 @@ bool Score::pasteStaff(XmlReader& e, Segment* dst, int dstStaff)
                               cr->read(e);
                               cr->setSelected(false);
                               int tick = e.tick();
+                              // no paste into local time signature
+                              if (staff(dstStaffIdx)->isLocalTimeSignature(tick)) {
+                                    qDebug("paste into local time signature");
+                                    return PasteStatus::DEST_LOCAL_TIME_SIGNATURE;;
+                                    }
                               if (cr->isGrace())
                                     graceNotes.push_back(static_cast<Chord*>(cr));
                               else {
@@ -189,7 +199,7 @@ bool Score::pasteStaff(XmlReader& e, Segment* dst, int dstStaff)
                                                 int rticks = m->endTick() - tick;
                                                 if (rticks < ticks || (rticks != ticks && rticks < ticks * 2)) {
                                                       qDebug("tremolo does not fit in measure");
-                                                      return false;
+                                                      return PasteStatus::DEST_TREMOLO;
                                                       }
                                                 }
                                           for (int i = 0; i < graceNotes.size(); ++i) {
@@ -437,7 +447,7 @@ bool Score::pasteStaff(XmlReader& e, Segment* dst, int dstStaff)
             if (!selection().isRange())
                   _selection.setState(SelState::RANGE);
             }
-      return true;
+      return PasteStatus::PS_NO_ERROR;
       }
 
 //---------------------------------------------------------
@@ -872,9 +882,10 @@ PasteStatus Score::cmdPaste(const QMimeData* ms, MuseScoreView* view)
                         qDebug("paste <%s>", data.data());
                   XmlReader e(data);
                   e.setPasteMode(true);
-                  if (!pasteStaff(e, cr->segment(), cr->staffIdx())) {
+                  PasteStatus ps = pasteStaff(e, cr->segment(), cr->staffIdx());
+                  if (ps != PasteStatus::PS_NO_ERROR) {
                         qDebug("paste failed");
-                        return PasteStatus::TUPLET_CROSSES_BAR;
+                        return ps;
                         }
                   }
             }
