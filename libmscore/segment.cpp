@@ -1378,7 +1378,7 @@ qreal Segment::minLeft() const
 //   minHorizontalDistance
 //---------------------------------------------------------
 
-qreal Segment::minHorizontalDistance(Segment* ns) const
+qreal Segment::minHorizontalDistance(Segment* ns, bool systemHeaderGap) const
       {
       Segment::Type st  = segmentType();
       Segment::Type nst = ns ? ns->segmentType() : Segment::Type::Invalid;
@@ -1387,20 +1387,24 @@ qreal Segment::minHorizontalDistance(Segment* ns) const
 
       qreal w = 0.0;
       for (unsigned staffIdx = 0; staffIdx < _shapes.size(); ++staffIdx) {
-            qreal d = shape(staffIdx).minHorizontalDistance(ns->shape(staffIdx));
-//            if (st == Segment::Type::ChordRest && nst == Segment::Type::Clef)
-//                  d = qMax(d, minRight()) + score()->styleP(StyleIdx::noteBarDistance);
+            qreal d = staffShape(staffIdx).minHorizontalDistance(ns->staffShape(staffIdx));
             w = qMax(w, d);
-//            printf("    %d: %f -> %f\n", staffIdx, d, w);
             }
 
       if (st == Segment::Type::ChordRest) {
             if (nst == Segment::Type::EndBarLine)
-                  w = qMax(w, score()->noteHeadWidth()) + score()->styleP(StyleIdx::noteBarDistance);
+                  // w = qMax(w, score()->noteHeadWidth()) + score()->styleP(StyleIdx::noteBarDistance);
+                  w += score()->styleP(StyleIdx::noteBarDistance);
             else if (nst == Segment::Type::Clef)
                   w = qMax(w, score()->styleP(StyleIdx::clefLeftMargin));
             else
                   w = qMax(w, score()->noteHeadWidth()) + score()->styleP(StyleIdx::minNoteDistance);
+            }
+      else if (st != Segment::Type::ChordRest && nst == Segment::Type::ChordRest) {
+            qreal d = score()->styleP(systemHeaderGap ? StyleIdx::systemHeaderDistance : StyleIdx::barNoteDistance);
+            d      -= ns->minLeft() * .7;      // hack
+            d       = qMax(d, spatium());
+            w       = qMax(w, minRight()) + d;
             }
       else if (st == Segment::Type::Clef) {
             if (nst == Segment::Type::KeySig)
@@ -1414,14 +1418,6 @@ qreal Segment::minHorizontalDistance(Segment* ns) const
             w += score()->styleP(StyleIdx::keyTimesigDistance);
       else if (st == Segment::Type::KeySig && nst == Segment::Type::StartRepeatBarLine)
             w += score()->styleP(StyleIdx::keyBarlineDistance);
-      else if (st != Segment::Type::ChordRest && nst == Segment::Type::ChordRest) {
-//            printf("%s - %s w %f minLeft %f spatium %f noteDist %f\n",
-//                  subTypeName(), ns->subTypeName(), w, ns->minLeft(), spatium(), score()->styleP(StyleIdx::barNoteDistance));
-            qreal d = score()->styleP(StyleIdx::barNoteDistance) - ns->minLeft() * .7;
-            if (d < spatium())
-                  d = spatium();
-            w = qMax(w, minRight()) + d;
-            }
       else if (st == Segment::Type::StartRepeatBarLine)
             w += score()->styleP(StyleIdx::noteBarDistance);
       else if (st == Segment::Type::BeginBarLine && nst == Segment::Type::Clef)

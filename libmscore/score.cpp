@@ -1163,7 +1163,7 @@ void Score::addElement(Element* element)
       if (parent)
             parent->add(element);
 
-      switch(et) {
+      switch (et) {
             case Element::Type::BEAM:
                   {
                   Beam* b = static_cast<Beam*>(element);
@@ -1249,10 +1249,12 @@ void Score::addElement(Element* element)
             case Element::Type::ARPEGGIO:
                   {
                   Element* cr = parent;
-                  if (cr->type() == Element::Type::CHORD)
-                        createPlayEvents(static_cast<Chord*>(cr));
+                  if (cr->isChord())
+                        createPlayEvents(toChord(cr));
+                  setLayout(cr->tick());
                   }
-                  break;
+                  return;
+
             default:
                   break;
             }
@@ -1387,15 +1389,20 @@ void Score::removeElement(Element* element)
             case Element::Type::ARPEGGIO:
                   {
                   Element* cr = element->parent();
-                  if (cr->type() == Element::Type::CHORD)
-                        createPlayEvents(static_cast<Chord*>(cr));
+                  if (cr->isChord())
+                        createPlayEvents(toChord(cr));
+                  setLayout(cr->tick());
                   }
-                  break;
+                  return;
+
+            case Element::Type::NOTE:
+                  setLayout(element->tick());
+                  return;
 
             default:
                   break;
             }
-//      setLayoutAll();
+      setLayoutAll();
       }
 
 //---------------------------------------------------------
@@ -1684,11 +1691,12 @@ void MasterScore::addExcerpt(Score* score)
 //   removeExcerpt
 //---------------------------------------------------------
 
-void Score::removeExcerpt(Score* score)
+void MasterScore::removeExcerpt(Score* score)
       {
       for (Excerpt* ex : excerpts()) {
             if (ex->partScore() == score) {
                   if (excerpts().removeOne(ex)) {
+                        setExcerptsChanged(true);
                         delete ex;
                         return;
                         }
@@ -1750,7 +1758,7 @@ void Score::removeAudio()
 //   appendScore
 //---------------------------------------------------------
 
-bool Score::appendScore(Score* score)
+bool Score::appendScore(Score* score, bool addPageBreak, bool addSectionBreak)
       {
       if (parts().size() < score->parts().size() || staves().size() < score->staves().size())
             return false;
@@ -1761,13 +1769,17 @@ bool Score::appendScore(Score* score)
             return false;
       int tickOfAppend = lastMeasure->endTick();
 
-      if (!lastMeasure->lineBreak() && !lastMeasure->pageBreak()) {
+      // apply Page/Section Breaks if desired
+      if (addPageBreak) {
+            if (!lastMeasure->pageBreak()) {
+                  lastMeasure->undoSetBreak(false, LayoutBreak::Type::LINE); // remove line break if exists
+                  lastMeasure->undoSetBreak(true, LayoutBreak::Type::PAGE);  // apply page break
+                  }
+            }
+      else if (!lastMeasure->lineBreak() && !lastMeasure->pageBreak())
             lastMeasure->undoSetBreak(true, LayoutBreak::Type::LINE);
-            }
-
-      if (!lastMeasure->sectionBreak()) {
+      if (addSectionBreak && !lastMeasure->sectionBreak())
             lastMeasure->undoSetBreak(true, LayoutBreak::Type::SECTION);
-            }
 
       // match concert pitch states
       if (styleB(StyleIdx::concertPitch) != score->styleB(StyleIdx::concertPitch))
@@ -2996,7 +3008,7 @@ void Score::cmdSelectAll()
       selectRange(first, 0);
       selectRange(last, nstaves() - 1);
       setUpdateAll();
-      end();
+      update();
       }
 
 //---------------------------------------------------------

@@ -19,9 +19,7 @@
 //=============================================================================
 
 #include "drumroll.h"
-
 #include "config.h"
-#include "drumroll.h"
 #include "piano.h"
 #include "ruler.h"
 #include "drumview.h"
@@ -271,7 +269,7 @@ void DrumrollEditor::selectionChanged()
                   }
             }
       _score->setUpdateAll();
-      _score->end();
+      _score->update();
 //      _score->blockSignals(false);
       }
 

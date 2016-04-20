@@ -1175,8 +1175,8 @@ void MuseScore::selectScore(QAction* action)
       if (!a.isEmpty()) {
             if (a == "clear-recent") {
                   _recentScores.clear();
-//                  if (startcenter)
-//TODO                        startcenter->updateRecentScores();
+                  if (startcenter)
+                        startcenter->updateRecentScores();
                   }
             else {
                   MasterScore* score = readScore(a);
@@ -1268,8 +1268,8 @@ void MuseScore::addRecentScore(Score* score)
       addRecentScore(path);
       path = score->masterScore()->fileInfo()->absoluteFilePath();
       addRecentScore(path);
-//TODO      if (startcenter)
-//            startcenter->updateRecentScores();
+      if (startcenter)
+            startcenter->updateRecentScores();
       }
 
 void MuseScore::addRecentScore(const QString& scorePath)
@@ -2302,17 +2302,20 @@ static void mscoreMessageHandler(QtMsgType type, const QMessageLogContext &conte
      QByteArray localMsg = msg.toLocal8Bit();
 
      switch (type) {
+     case QtInfoMsg:
+         cerr << "Info: "     << localMsg.constData() << " ("  << context.file << ":" << context.line << ", " << context.function << ")" << endl;
+         break;
      case QtDebugMsg:
-         cerr << "Debug: " << localMsg.constData() << " ("  << context.file << ":" << context.line << ", " << context.function << ")" << endl;
+         cerr << "Debug: "    << localMsg.constData() << " ("  << context.file << ":" << context.line << ", " << context.function << ")" << endl;
          break;
      case QtWarningMsg:
-         cerr << "Warning: " << localMsg.constData() << " ("  << context.file << ":" << context.line << ", " << context.function << ")" << endl;
+         cerr << "Warning: "  << localMsg.constData() << " ("  << context.file << ":" << context.line << ", " << context.function << ")" << endl;
          break;
-     case QtCriticalMsg:
+     case QtCriticalMsg: // same as QtSystemMsg
          cerr << "Critical: " << localMsg.constData() << " ("  << context.file << ":" << context.line << ", " << context.function << ")" << endl;
          break;
      case QtFatalMsg: // set your breakpoint here, if you want to catch the abort
-         cerr << "Fatal: " << localMsg.constData() << " ("  << context.file << ":" << context.line << ", " << context.function << ")" << endl;
+         cerr << "Fatal: "    << localMsg.constData() << " ("  << context.file << ":" << context.line << ", " << context.function << ")" << endl;
          abort();
          }
      }
@@ -2759,13 +2762,15 @@ void MuseScore::writeSettings()
             settings.setValue(QString("recent-%1").arg(i), _recentScores.value(i));
 
       settings.setValue("scores", scoreList.size());
-      int curScore = scoreList.indexOf(cs->masterScore());
-      if (curScore == -1)  // cs removed if new created and not modified
-            curScore = 0;
-      settings.setValue("currentScore", curScore);
+      if (cs) {
+            int curScore = scoreList.indexOf(cs->masterScore());
+            if (curScore == -1)  // cs removed if new created and not modified
+                  curScore = 0;
+            settings.setValue("currentScore", curScore);
 
-      for (int idx = 0; idx < scoreList.size(); ++idx)
-            settings.setValue(QString("score-%1").arg(idx), scoreList[idx]->masterScore()->fileInfo()->absoluteFilePath());
+            for (int idx = 0; idx < scoreList.size(); ++idx)
+                  settings.setValue(QString("score-%1").arg(idx), scoreList[idx]->masterScore()->fileInfo()->absoluteFilePath());
+            }
 
       settings.setValue("lastSaveCopyDirectory", lastSaveCopyDirectory);
       settings.setValue("lastSaveCopyFormat", lastSaveCopyFormat);
@@ -2829,8 +2834,8 @@ void MuseScore::writeSettings()
             pianorollEditor->writeSettings();
       if (drumrollEditor)
             drumrollEditor->writeSettings();
-//TODO      if (startcenter)
-//            startcenter->writeSettings(settings);
+      if (startcenter)
+            startcenter->writeSettings(settings);
       }
 
 //---------------------------------------------------------
@@ -2968,13 +2973,24 @@ AboutBoxDialog::AboutBoxDialog()
             ":/data/musescore-logo-transbg-m.png" : ":/data/musescore_logo_full.png"));
 
       if (MuseScore::unstable())
-            versionLabel->setText(tr("Unstable Prerelease for Version: ") + VERSION);
+            versionLabel->setText(tr("Unstable Prerelease for Version: %1").arg(VERSION));
       else
-            versionLabel->setText(tr("Version: ") + VERSION);
+            versionLabel->setText(tr("Version: %1").arg(VERSION));
       revisionLabel->setText(tr("Revision: %1").arg(revision));
       setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
       copyRevisionButton->setIcon(*icons[int(Icons::copy_ICON)]);
+
+      copyrightLabel->setText(QString("<span style=\"font-size:10pt;\">%1</span>")
+                              .arg(tr(   "Visit %1www.musescore.org%2 for new versions and more information.\n"
+                                         "Support MuseScore with your %3donation%4.\n\n"
+                                         "Copyright &copy; 1999-2016 Werner Schweer and Others.\n"
+                                         "Published under the GNU General Public License.")
+                                   .arg("<a href=\"http://www.musescore.org/\">")
+                                   .arg("</a>")
+                                   .arg("<a href=\"http://www.musescore.org/donate\">")
+                                   .arg("</a>")
+                                   .replace("\n","<br/>")));
       connect(copyRevisionButton, SIGNAL(clicked()), this, SLOT(copyRevisionToClipboard()));
       }
 
@@ -2996,6 +3012,13 @@ AboutMusicXMLBoxDialog::AboutMusicXMLBoxDialog()
       {
       setupUi(this);
       setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
+      label->setText(QString("<span style=\"font-size:10pt;\">%1<br/></span>")
+                     .arg(tr(   "MusicXML is an open file format for exchanging digital sheet music,\n"
+                                "supported by many applications. MusicXML is copyright &copy; MakeMusic, Inc.\n"
+                                "All rights reserved. For more information, see: %1MusicXML.com%2.")
+                          .arg("<a href=\"http://www.musicxml.com\">")
+                          .arg("</a>")
+                          .replace("\n","<br/>")));
       }
 
 //---------------------------------------------------------
@@ -3171,8 +3194,8 @@ void MuseScore::handleMessage(const QString& message)
       {
       if (message.isEmpty())
             return;
-//TODO      if (startcenter)
-//            showStartcenter(false);
+      if (startcenter)
+            showStartcenter(false);
       ((QtSingleApplication*)(qApp))->activateWindow();
       MasterScore* score = readScore(message);
       if (score) {
@@ -3506,7 +3529,7 @@ void MuseScore::splitWindow(bool horizontal)
                   tab2->setCurrentIndex(0);
                   MasterScore* s = scoreList[0];
                   s->setLayoutAll();
-                  s->end();
+                  s->update();
                   setCurrentView(1, 0);
                   }
             }
@@ -3555,7 +3578,7 @@ const char* stateName(ScoreState s)
 //   excerptsChanged
 //---------------------------------------------------------
 
-void MuseScore::excerptsChanged(Score* s)
+void MuseScore::excerptsChanged(MasterScore* s)
       {
       if (tab2) {
 //            ScoreView* v = tab2->view();
@@ -3967,7 +3990,7 @@ void MuseScore::cmd(QAction* a)
       QString cmdn(a->data().toString());
 
       if (MScore::debugMode)
-            qDebug("MuseScore::cmd <%s>", cmdn.toLatin1().data());
+            qDebug("MuseScore::cmd <%s>", qPrintable(cmdn));
 
       const Shortcut* sc = Shortcut::getShortcut(cmdn.toLatin1().data());
       if (sc == 0) {
@@ -4054,16 +4077,16 @@ void MuseScore::endCmd()
                   cs->setPlayNote(false);
                   cs->setPlayChord(false);
                   }
-            if (cs->masterScore()->excerptsChanged()) {
-                  //Q_ASSERT(cs == cs->masterScore());
-                  excerptsChanged(cs->masterScore());
-                  cs->masterScore()->setExcerptsChanged(false);
+            MasterScore* ms = cs->masterScore();
+            if (ms->excerptsChanged()) {
+                  excerptsChanged(ms);
+                  ms->setExcerptsChanged(false);
                   }
-            if (cs->masterScore()->instrumentsChanged()) {
+            if (ms->instrumentsChanged()) {
                   if (!noSeq && (seq && seq->isRunning()))
                         seq->initInstruments();
                   instrumentChanged();                // update mixer
-                  cs->setInstrumentsChanged(false);
+                  ms->setInstrumentsChanged(false);
                   }
             if (cs->selectionChanged()) {
                   cs->setSelectionChanged(false);
@@ -4075,7 +4098,7 @@ void MuseScore::endCmd()
             if (e == 0 && cs->noteEntryMode())
                   e = cs->inputState().cr();
             updateViewModeCombo();
-            cs->end();
+//            cs->update();
             ScoreAccessibility::instance()->updateAccessibilityInfo();
             }
       else {
@@ -4202,8 +4225,8 @@ void MuseScore::cmd(QAction* a, const QString& cmd)
             undoRedo(false);
       else if (cmd == "toggle-palette")
             showPalette(a->isChecked());
-//TODO      else if (cmd == "startcenter")
-//            showStartcenter(a->isChecked());
+      else if (cmd == "startcenter")
+            showStartcenter(a->isChecked());
       else if (cmd == "inspector")
             showInspector(a->isChecked());
 #ifdef OMR
@@ -4383,7 +4406,7 @@ void MuseScore::cmd(QAction* a, const QString& cmd)
                   //isAncestorOf is called to see if a widget from inspector has focus
                   //if so, the focus doesn't get shifted to the score, unless escape is
                   //pressed, or the user clicks in the score
-                  if(!inspector()->isAncestorOf(qApp->focusWidget()) || cmd == "escape")
+                  if (!inspector()->isAncestorOf(qApp->focusWidget()) || cmd == "escape")
                         cv->setFocus();
                   cv->cmd(a);
                   }
@@ -4856,7 +4879,7 @@ int main(int argc, char* av[])
             }
 
       if (dataPath.isEmpty())
-            dataPath = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+            dataPath = QStandardPaths::writableLocation(QStandardPaths::DataLocation);
 
       if (deletePreferences) {
             QDir(dataPath).removeRecursively();

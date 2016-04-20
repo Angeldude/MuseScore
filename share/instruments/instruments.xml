@@ -213,17 +213,17 @@
                         <program value="73"/>
                   </Channel>
             </Instrument>
-            <Instrument id="baroque-flute">
-                  <longName>Baroque Flute</longName>
-                  <shortName>Bq. Fl.</shortName>
-                  <description>Baroque Traverse Flute</description>
+            <Instrument id="traverso">
+                  <longName>Traverso</longName>
+                  <shortName>Trv.</shortName>
+                  <description>Traverso</description>
                   <musicXMLid>wind.flutes.flute</musicXMLid>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>62-88</aPitchRange>
                   <pPitchRange>62-93</pPitchRange>
                   <Channel>
-                        <program value="74"/>
+                        <program value="73"/>
                   </Channel>
                   <Articulation>
                         <velocity>100</velocity>
@@ -6770,6 +6770,8 @@
       <InstrumentGroup id="vocals">
             <name>Vocals</name>
             <Instrument id="voice">
+            <!-- don't remove this 'instrument', it is used in ...mscore/noteGroups.cpp,
+                 to generate the time sig dialog of the master palette -->
                   <longName>Voice</longName>
                   <shortName>Vo.</shortName>
                   <description>Voice</description>
@@ -8608,6 +8610,8 @@
                   </Channel>
             </Instrument>
             <Instrument id="electric-guitar">
+            <!-- don't remove this instrument, it is used in ...mtest/libmscore/links/tst_links.cpp
+                 and ...mtest/libmscore/midi/tst_midi.cpp for testing purposes -->
                   <longName>Electric Guitar</longName>
                   <shortName>El. Guit.</shortName>
                   <description>Electric Guitar</description>
@@ -9317,6 +9321,119 @@
                   <stafftype staffTypePreset="tab5StrCommon">tablature</stafftype>
 <!--                  <clef>TAB</clef> -->
                   <genre>common</genre>
+            </Instrument>
+            <Instrument id="prima">
+                  <longName>Prima</longName>
+                  <shortName>Pr.</shortName>
+                  <description>Prima</description>
+                  <musicXMLid>pluck.tambura.prima</musicXMLid>
+                  <StringData>
+                        <frets>15</frets>
+                        <string>52</string>
+                        <string>57</string>
+                        <string>62</string>
+                        <string>67</string>
+                  </StringData>
+                  <clef>G</clef>
+                  <barlineSpan>1</barlineSpan>
+                  <aPitchRange>64-91</aPitchRange>
+                  <pPitchRange>64-91</pPitchRange>
+                  <transposeDiatonic>7</transposeDiatonic>
+                  <transposeChromatic>12</transposeChromatic>
+                  <Channel>
+                        <program value="24"/>
+                  </Channel>
+                  <genre>ethnic</genre>
+            </Instrument>
+            <Instrument id="brac">
+                  <longName>Brač</longName>
+                  <shortName>Br.</shortName>
+                  <description>Brač</description>
+                  <musicXMLid>pluck.tambura.brac</musicXMLid>
+                  <StringData>
+                        <frets>15</frets>
+                        <string>40</string>
+                        <string>45</string>
+                        <string>50</string>
+                        <string>55</string>
+                  </StringData>
+                  <clef>G</clef>
+                  <barlineSpan>1</barlineSpan>
+                  <aPitchRange>52-79</aPitchRange>
+                  <pPitchRange>52-79</pPitchRange>
+                  <Channel>
+                        <program value="24"/>
+                  </Channel>
+                  <genre>ethnic</genre>
+            </Instrument>
+            <Instrument id="celo">
+                  <longName>Čelo</longName>
+                  <shortName>Č.</shortName>
+                  <description>Čelo</description>
+                  <musicXMLid>pluck.tambura.celo</musicXMLid>
+                  <StringData>
+                        <frets>15</frets>
+                        <string>40</string>
+                        <string>45</string>
+                        <string>50</string>
+                        <string>55</string>
+                  </StringData>
+                  <clef>G</clef>
+                  <barlineSpan>1</barlineSpan>
+                  <aPitchRange>3-60</aPitchRange>
+                  <pPitchRange>3-60</pPitchRange>
+                  <transposeDiatonic>-14</transposeDiatonic>
+                  <transposeChromatic>-24</transposeChromatic>
+                  <Channel>
+                        <program value="24"/>
+                  </Channel>
+                  <genre>ethnic</genre>
+            </Instrument>
+            <Instrument id="bugarija">
+                  <longName>Bugarija</longName>
+                  <shortName>Bu.</shortName>
+                  <description>Bugarija</description>
+                  <musicXMLid>pluck.tambura.bugarija</musicXMLid>
+                  <StringData>
+                        <frets>15</frets>
+                        <string>38</string>
+                        <string>42</string>
+                        <string>45</string>
+                        <string>50</string>
+                  </StringData>
+                  <clef>G</clef>
+                  <barlineSpan>1</barlineSpan>
+                  <aPitchRange>43-66</aPitchRange>
+                  <pPitchRange>43-66</pPitchRange>
+                  <transposeDiatonic>-7</transposeDiatonic>
+                  <transposeChromatic>-12</transposeChromatic>
+                  <Channel>
+                        <program value="24"/>
+                  </Channel>
+                  <genre>ethnic</genre>
+            </Instrument>
+            <Instrument id="berda">
+                  <longName>Berda</longName>
+                  <shortName>Be.</shortName>
+                  <description>Berda</description>
+                  <musicXMLid>pluck.tambura.berda</musicXMLid>
+                  <StringData>
+                        <frets>15</frets>
+                        <string>28</string>
+                        <string>33</string>
+                        <string>38</string>
+                        <string>43</string>
+                  </StringData>
+                  <clef>F</clef>
+                  <barlineSpan>1</barlineSpan>
+                  <aPitchRange>28-66</aPitchRange>
+                  <pPitchRange>28-66</pPitchRange>
+                  <transposeDiatonic>-7</transposeDiatonic>
+                  <transposeChromatic>-12</transposeChromatic>
+                  <Channel>
+                        <program value="32"/>
+                  </Channel>
+                  <genre>ethnic</genre>
             </Instrument>
       </InstrumentGroup>
       <InstrumentGroup id="strings">

@@ -504,7 +504,7 @@ void Beam::layout()
             layout2(crl, st, n);
 
             qreal lw2      = score()->styleP(StyleIdx::beamWidth) * .5 * mag();
-            ChordRest* cr  = crl.front();
+//            ChordRest* cr  = crl.front();
 //            Shape& s       = cr->segment()->shape(staffIdx());
 //            QPointF offset = cr->pos() + cr->segment()->pos() + cr->segment()->measure()->pos();
 
@@ -1948,7 +1948,7 @@ void Beam::layout2(std::vector<ChordRest*>crl, SpannerSegmentType, int frag)
                         sw2 = -sw2;
                   stem->setLen(y2 - (by + _pagePos.y()));
                   stem->rxpos() = c->stemPosX() + sw2;
-                  Shape& shape = cr->segment()->shape(cr->vStaffIdx());
+                  Shape& shape = cr->segment()->staffShape(cr->vStaffIdx());
                   shape.add(stem->shape());
                   }
 

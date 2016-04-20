@@ -18,12 +18,8 @@
 #  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #=============================================================================
 
-REVISION  = `cat mscore/revision.h`
-CPUS      = $(shell grep -c processor /proc/cpuinfo)
-# Avoid build errors when processor=0 (as in m68k)
-ifeq ($(CPUS), 0)
-  CPUS=1
-endif
+REVISION  := `cat mscore/revision.h`
+CPUS      := $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || getconf NPROCESSORS_ONLN 2>/dev/null || echo 1)
 
 PREFIX    = "/usr/local"
 VERSION   = "2.1b-${REVISION}"
@@ -192,10 +188,5 @@ unix:
          else                                      \
             echo "build directory linux does alread exist, please remove first";  \
          fi
-
-doxy:
-	doxygen build.debug/Doxyfile
-doxylib:
-	doxygen build.debug/Doxyfile-LibMscore
 
 

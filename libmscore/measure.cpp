@@ -2550,7 +2550,7 @@ qreal Measure::createEndBarLines(bool isLastMeasureInSystem)
             t = BarLineType::END_REPEAT;
             force = true;
             }
-      else if (!isLastMeasureInSystem && nextMeasure()->repeatStart()) {
+      else if (!isLastMeasureInSystem && nextMeasure() && nextMeasure()->repeatStart()) {
             t = BarLineType::START_REPEAT;
             force = true;
             }
@@ -2579,7 +2579,7 @@ qreal Measure::createEndBarLines(bool isLastMeasureInSystem)
 
       // fix previous segment width
       Segment* ps = seg->prev();
-      qreal www   = ps->minHorizontalDistance(seg);
+      qreal www   = ps->minHorizontalDistance(seg, false);
       w          += www - ps->width();
       ps->setWidth(www);
 
@@ -2641,17 +2641,16 @@ void Measure::checkMultiVoices(int staffIdx)
       int strack = staffIdx * VOICES + 1;
       int etrack = staffIdx * VOICES + VOICES;
       _mstaves[staffIdx]->hasVoices = false;
-      for (Segment* s = first(); s; s = s->next()) {
-            if (s->isChordRestType())
-                  continue;
+
+      for (Segment* s = first(Segment::Type::ChordRest); s; s = s->next(Segment::Type::ChordRest)) {
             for (int track = strack; track < etrack; ++track) {
                   Element* e = s->element(track);
                   if (e) {
                         bool v;
-                        if (e->type() == Element::Type::CHORD) {
+                        if (e->isChord()) {
                               v = false;
                               // consider chord visible if any note is visible
-                              Chord* c = static_cast<Chord*>(e);
+                              Chord* c = toChord(e);
                               for (Note* n : c->notes()) {
                                     if (n->visible()) {
                                           v = true;
@@ -3419,5 +3418,31 @@ void Measure::removeSystemTrailer()
                   }
             }
       }
+
+//---------------------------------------------------------
+//   endBarLineType
+//    Assume all barlines have same type if there is more
+//    than one.
+//---------------------------------------------------------
+
+BarLineType Measure::endBarLineType() const
+      {
+      // search barline segment:
+
+      Segment* s = last();
+      while (s && s->segmentType() != Segment::Type::EndBarLine)
+            s = s->prev();
+
+      // search first element
+
+      if (s) {
+            for (const Element* e : s->elist()) {
+                  if (e)
+                        return toBarLine(e)->barLineType();
+                  }
+            }
+      return BarLineType::NORMAL;
+      }
+
 }
 

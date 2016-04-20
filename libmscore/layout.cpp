@@ -1450,24 +1450,23 @@ qreal Score::cautionaryWidth(Measure* m, bool& hasCourtesy)
 
 void Score::hideEmptyStaves(System* system, bool isFirstSystem)
       {
-       //
-      //    hide empty staves
-      //
-      int staves = _staves.size();
+      int staves   = _staves.size();
       int staffIdx = 0;
       bool systemIsEmpty = true;
 
-      foreach (Staff* staff, _staves) {
-            SysStaff* s  = system->staff(staffIdx);
-            bool oldShow = s->show();
+      for (Staff* staff : _staves) {
+            SysStaff* ss  = system->staff(staffIdx);
+//            bool oldShow = ss->show();
+
             Staff::HideMode hideMode = staff->hideWhenEmpty();
+
             if (hideMode == Staff::HideMode::ALWAYS
                 || (styleB(StyleIdx::hideEmptyStaves)
                     && (staves > 1)
                     && !(isFirstSystem && styleB(StyleIdx::dontHideStavesInFirstSystem))
                     && hideMode != Staff::HideMode::NEVER)) {
                   bool hideStaff = true;
-                  foreach(MeasureBase* m, system->measures()) {
+                  for (MeasureBase* m : system->measures()) {
                         if (!m->isMeasure())
                               continue;
                         Measure* measure = toMeasure(m);
@@ -1507,34 +1506,40 @@ void Score::hideEmptyStaves(System* system, bool isFirstSystem)
                                     break;
                               }
                         }
-                  s->setShow(hideStaff ? false : staff->show());
-                  if (s->show()) {
+                  ss->setShow(hideStaff ? false : staff->show());
+                  if (ss->show())
                         systemIsEmpty = false;
-                        }
                   }
             else {
                   systemIsEmpty = false;
-                  s->setShow(true);
+                  ss->setShow(true);
                   }
 
-            if (oldShow != s->show()) {
 #if 0
+            if (oldShow != s->show()) {
                   foreach (MeasureBase* mb, system->measures()) {
                         if (!mb->isMeasure())
                               continue;
                         static_cast<Measure*>(mb)->createEndBarLines();
                         }
-#endif
                   }
+#endif
             ++staffIdx;
             }
       if (systemIsEmpty) {
-            foreach (Staff* staff, _staves) {
-                  SysStaff* s  = system->staff(staff->idx());
-                  if (staff->showIfEmpty() && !s->show()) {
-                        s->setShow(true);
+            for (Staff* staff : _staves) {
+                  SysStaff* ss  = system->staff(staff->idx());
+                  if (staff->showIfEmpty() && !ss->show()) {
+                        ss->setShow(true);
+                        systemIsEmpty = false;
                         }
                   }
+            }
+      // dont allow a complete empty system
+      if (systemIsEmpty) {
+            Staff* staff = _staves.front();
+            SysStaff* ss = system->staff(staff->idx());
+            ss->setShow(true);
             }
       }
 
@@ -2069,8 +2074,9 @@ qreal Score::computeMinWidth(Segment* s, bool isFirstMeasureInSystem)
       qreal keysigLeftMargin  = styleP(StyleIdx::keysigLeftMargin);
       qreal timesigLeftMargin = styleP(StyleIdx::timesigLeftMargin);
 
-      if (s->isChordRestType())
-            x += styleP(StyleIdx::barNoteDistance);
+      if (s->isChordRestType()) {
+            x = qMax(x + styleP(StyleIdx::minNoteDistance), styleP(StyleIdx::barNoteDistance));
+            }
       else if (s->isClefType())
             // x = qMax(x, clefLeftMargin);
             x += styleP(StyleIdx::clefLeftMargin);
@@ -2080,13 +2086,20 @@ qreal Score::computeMinWidth(Segment* s, bool isFirstMeasureInSystem)
             x = qMax(x, timesigLeftMargin);
       x += s->extraLeadingSpace().val() * spatium();
 
+      bool isSystemHeader = isFirstMeasureInSystem;
+
       for (Segment* ss = s; ss;) {
             ss->rxpos() = x;
             Segment* ns = ss->next();
             qreal w;
 
             if (ns) {
-                  w = ss->minHorizontalDistance(ns);
+                  if (isSystemHeader && ns->isChordRestType()) {        // this is the system header gap
+                        w = ss->minHorizontalDistance(ns, true);
+                        isSystemHeader = false;
+                        }
+                  else
+                        w = ss->minHorizontalDistance(ns, false);
 #if 1
                   // look back for collisions with previous segments
                   // this is time consuming (ca. +5%) and probably requires more optimization
@@ -2100,7 +2113,7 @@ qreal Score::computeMinWidth(Segment* s, bool isFirstMeasureInSystem)
                               ps = ps->prev();
                               if (ps->isChordRestType())
                                     ++n;
-                              ww = ps->minHorizontalDistance(ns) - (ss->x() - ps->x());
+                              ww = ps->minHorizontalDistance(ns, false) - (ss->x() - ps->x());
                               }
                         if (ww > w) {
                               // overlap !
@@ -2691,7 +2704,7 @@ void Score::getNextMeasure(LayoutContext& lc)
 
       Measure* measure = toMeasure(lc.curMeasure);
       measure->moveTicks(lc.tick - measure->tick());
-      if (isMaster() && lc.prevMeasure) {
+      if (isMaster() && !lc.prevMeasure) {
             lc.sig = measure->len();
             tempomap()->clear();
             sigmap()->clear();
@@ -3066,18 +3079,15 @@ System* Score::collectSystem(LayoutContext& lc)
                         ww = m->minWidth1();    // without system header
                   else
                         ww = computeMinWidth(m->first(), false);
-//                  if (ww < minMeasureWidth)
-//                        ww = minMeasureWidth;
                   ww += m->createEndBarLines(true);
-//                  m->setWidth(ww);
 
                   qreal stretch = m->userStretch() * measureSpacing;
                   if (stretch < 1.0)
                         stretch = 1.0;
                   ww *= stretch;
-                  m->setWidth(ww);
                   if (ww < minMeasureWidth)
                         ww = minMeasureWidth;
+                  m->setWidth(ww);
 
                   bool hasCourtesy;
                   cautionaryW = cautionaryWidth(m, hasCourtesy) * stretch;
@@ -3112,8 +3122,7 @@ System* Score::collectSystem(LayoutContext& lc)
             switch (_layoutMode) {
                   case LayoutMode::PAGE:
                   case LayoutMode::SYSTEM:
-                        pbreak =
-                              lc.curMeasure->pageBreak()
+                        pbreak = lc.curMeasure->pageBreak()
                                  || lc.curMeasure->lineBreak()
                                  || lc.curMeasure->sectionBreak()
                                  || lc.curMeasure->isVBox()
@@ -3125,18 +3134,22 @@ System* Score::collectSystem(LayoutContext& lc)
                         break;
                   }
 
-            Element::Type nt = lc.nextMeasure ? lc.nextMeasure->type() : Element::Type::INVALID;
-            if (pbreak || (nt == Element::Type::VBOX || nt == Element::Type::TBOX || nt == Element::Type::FBOX)) {
-                  minWidth += ww;
-                  getNextMeasure(lc);
-                  break;
+            if (lc.rangeLayout && lc.endTick < lc.curMeasure->tick()) {
+                  // TODO: we may check if another measure fits in this system
+                  if (lc.curMeasure == lc.systemOldMeasure) {
+                        lc.rangeDone = true;
+                        break;
+                        }
                   }
+
             getNextMeasure(lc);
-
-            if (minWidth + minMeasureWidth > systemWidth)   // small optimization
-                  break;      // next measure will not fit
-
             minWidth += ww;
+
+            Element::Type nt = lc.curMeasure ? lc.curMeasure->type() : Element::Type::INVALID;
+            if (pbreak || nt == Element::Type::VBOX || nt == Element::Type::TBOX || nt == Element::Type::FBOX
+               || (minWidth + minMeasureWidth > systemWidth)) {
+                  break;      // break system
+                  }
 
             // whether the measure actually has courtesy elements or whether we added space for hypothetical ones,
             // we should remove the width of courtesy elements for this measure from the accumulated total
@@ -3443,14 +3456,12 @@ bool Score::collectPage(LayoutContext& lc)
             //
             //  check for page break or if next system will fit on page
             //
-            if (lc.rangeLayout && lc.endTick <= lc.curSystem->endTick()) {
+            if (lc.rangeDone) {
                   // take next system unchanged
                   System* s    = lc.systemList.empty() ? 0 : lc.systemList.takeFirst();
                   lc.curSystem = s;
-                  if (s) {
-                        lc.systemOldMeasure = lc.curSystem->measures().empty() ? 0 : lc.curSystem->measures().back();
+                  if (s)
                         _systems.append(lc.curSystem);
-                        }
                   }
             else
                   collectSystem(lc);
@@ -3576,6 +3587,13 @@ bool Score::collectPage(LayoutContext& lc)
 
 void Score::doLayout()
       {
+#if 0
+      static int mops= 0;
+
+      ++mops;
+      if (mops == 1)
+            abort();
+#endif
       qDebug();
 
       if (_staves.empty() || first() == 0) {
@@ -3600,11 +3618,14 @@ void Score::doLayout()
             createPlayEvents();
 
       LayoutContext lc;
+      lc.rangeDone = false;
       _systems.swap(lc.systemList);
       getNextMeasure(lc);
       getNextMeasure(lc);
 
       if (_layoutMode == LayoutMode::LINE) {
+            while (lc.curMeasure->isVBox())
+                  getNextMeasure(lc);
             layoutLinear(lc);
             }
       else {
@@ -3649,6 +3670,7 @@ void Score::doLayoutRange(int stick, int etick)
             }
 
       lc.rangeLayout = true;
+      lc.rangeDone   = false;
       lc.endTick     = etick;
       _scoreFont     = ScoreFont::fontFactory(_style.value(StyleIdx::MusicalSymbolFont).toString());
       _noteHeadWidth = _scoreFont->width(SymId::noteheadBlack, spatium() / SPATIUM20);
@@ -3669,16 +3691,11 @@ void Score::doLayoutRange(int stick, int etick)
       Page* p    = m->system()->page();
       System* s  = p->systems().front();
 
-      int systemIndex = _systems.indexOf(s);
-      lc.systemList   =  _systems.mid(systemIndex);
+      int systemIndex  = _systems.indexOf(s);
+      lc.systemList    =  _systems.mid(systemIndex);
       _systems.erase(_systems.begin() + systemIndex, _systems.end());
-      lc.curPage      = _pages.indexOf(p);
-
-      if (systemIndex > 0)
-            lc.curSystem = _systems[systemIndex-1];
-      else
-            lc.curSystem = 0;
-
+      lc.curPage       = _pages.indexOf(p);
+      lc.curSystem     = systemIndex > 0 ? _systems[systemIndex-1] : 0;
       lc.prevMeasure   = 0;
       lc.nextMeasure   = s->measure(0);
       lc.curMeasure    = s->measure(0)->prev();
@@ -3693,7 +3710,7 @@ void Score::doLayoutRange(int stick, int etick)
       //---------------------------------------------------
 
       while (collectPage(lc)) {
-            if (!lc.curSystem || (!lc.pageChanged && lc.curSystem->endTick() >= etick))
+            if (lc.rangeDone)
                   break;
             }
       if (!lc.curSystem) {
