@@ -1330,7 +1330,9 @@ void Score::addSystemHeader(Measure* m, bool isFirstSystem)
                   keysig = 0;
                   }
 
-            if (isFirstSystem || styleB(StyleIdx::genClef)) {
+            StaffType* staffType  = staff->staffType();
+            bool showClef         = staffType->genClef() && (isFirstSystem || styleB(StyleIdx::genClef));
+            if (showClef) {
                   ClefTypeList cl = staff->clefType(tick);
                   if (!clef) {
                         //
@@ -2089,28 +2091,30 @@ void Score::respace(std::vector<ChordRest*>* elements)
 
 qreal Score::computeMinWidth(Segment* s, bool isFirstMeasureInSystem)
       {
+      qreal x;
+
       Shape ls;
-      if (isFirstMeasureInSystem)
-            ls.add(QRectF(0.0, -1000000.0, 0.0, 2000000.0));   // left margin
-      else
-            ls.add(QRectF(0.0, 0.0, 0.0, spatium() * 4));      // simulated bar line
-      qreal x = s->minLeft(ls);
-
-      qreal keysigLeftMargin  = styleP(StyleIdx::keysigLeftMargin);
-      qreal timesigLeftMargin = styleP(StyleIdx::timesigLeftMargin);
-
       if (s->isChordRestType()) {
-            x = qMax(x + styleP(StyleIdx::minNoteDistance), styleP(StyleIdx::barNoteDistance));
+            // x = qMax(s->minLeft() + styleP(StyleIdx::minNoteDistance), styleP(StyleIdx::barNoteDistance));
+            x = s->minLeft() + styleP(StyleIdx::barNoteDistance);
             }
-      else if (s->isClefType())
-            // x = qMax(x, clefLeftMargin);
-            x += styleP(StyleIdx::clefLeftMargin);
-      else if (s->isKeySigType())
-            x = qMax(x, keysigLeftMargin);
-      else if (s->isTimeSigType())
-            x = qMax(x, timesigLeftMargin);
-      x += s->extraLeadingSpace().val() * spatium();
+      else {
+            if (isFirstMeasureInSystem)
+                  ls.add(QRectF(0.0, -1000000.0, 0.0, 2000000.0));   // left margin
+            else
+                  ls.add(QRectF(0.0, 0.0, 0.0, spatium() * 4));      // simulated bar line
+            x = s->minLeft(ls);
 
+            if (s->isClefType())
+                  // x = qMax(x, clefLeftMargin);
+                  x += styleP(StyleIdx::clefLeftMargin);
+            else if (s->isKeySigType())
+                  x = qMax(x, styleP(StyleIdx::keysigLeftMargin));
+            else if (s->isTimeSigType())
+                  x = qMax(x, styleP(StyleIdx::timesigLeftMargin));
+            }
+
+      x += s->extraLeadingSpace().val() * spatium();
       bool isSystemHeader = isFirstMeasureInSystem;
 
       for (Segment* ss = s; ss;) {
@@ -3202,7 +3206,6 @@ System* Score::collectSystem(LayoutContext& lc)
       Measure* nm = m ? m->nextMeasure() : 0;
       Segment* s;
 
-
       if (m && nm) {
             m->setHasSystemTrailer(false);
             int tick = m->endTick();
@@ -3257,6 +3260,8 @@ System* Score::collectSystem(LayoutContext& lc)
             else
                   s = m->findSegment(Segment::Type::KeySigAnnounce, tick);
 
+            Segment* clefSegment = m->findSegment(Segment::Type::Clef, tick);
+
             for (int staffIdx = 0; staffIdx < n; ++staffIdx) {
                   int track    = staffIdx * VOICES;
                   Staff* staff = _staves[staffIdx];
@@ -3284,6 +3289,14 @@ System* Score::collectSystem(LayoutContext& lc)
                         // remove any existent courtesy key signature
                         if (s && s->element(track))
                               undoRemoveElement(s->element(track));
+                        }
+                  if (clefSegment) {
+                        Clef* clef = toClef(clefSegment->element(track));
+                        if (clef && (!score()->styleB(StyleIdx::genCourtesyClef)
+                           || m->repeatEnd() || m->isFinalMeasureOfSection()
+                           || !clef->showCourtesy())) {
+                              clef->clear();          // make invisible
+                              }
                         }
                   }
             //HACK to layout cautionary elements:
