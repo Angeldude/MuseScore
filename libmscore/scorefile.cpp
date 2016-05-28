@@ -128,8 +128,8 @@ void Score::write(Xml& xml, bool selectionOnly)
             }
 
 #ifdef OMR
-      if (_omr && xml.writeOmr)
-            _omr->write(xml);
+      if (masterScore()->omr() && xml.writeOmr)
+            masterScore()->omr()->write(xml);
 #endif
       if (isMaster() && masterScore()->showOmr() && xml.writeOmr)
             xml.tag("showOmr", masterScore()->showOmr());
@@ -477,8 +477,10 @@ void Score::saveCompressedFile(QFileInfo& info, bool onlySelection)
 
 QImage Score::createThumbnail()
       {
-      LayoutMode layoutMode = _layoutMode;
-      switchToPageMode();
+      LayoutMode mode = layoutMode();
+      setLayoutMode(LayoutMode::PAGE);
+      doLayout();
+
       Page* page = pages().at(0);
       QRectF fr  = page->abbox();
       qreal mag  = 256.0 / qMax(fr.width(), fr.height());
@@ -495,8 +497,10 @@ QImage Score::createThumbnail()
       p.scale(mag, mag);
       print(&p, 0);
       p.end();
-      if (layoutMode != _layoutMode)
-            endCmd(true);       // rollback
+      if (layoutMode() != mode) {
+            setLayoutMode(mode);
+            doLayout();
+            }
       return pm;
       }
 
@@ -555,12 +559,12 @@ void Score::saveCompressedFile(QIODevice* f, QFileInfo& info, bool onlySelection
       //
       // save OMR page images
       //
-      if (_omr) {
-            int n = _omr->numPages();
+      if (masterScore()->omr()) {
+            int n = masterScore()->omr()->numPages();
             for (int i = 0; i < n; ++i) {
                   QString path = QString("OmrPages/page%1.png").arg(i+1);
                   QBuffer cbuf;
-                  OmrPage* page = _omr->page(i);
+                  OmrPage* page = masterScore()->omr()->page(i);
                   const QImage& image = page->image();
                   if (!image.save(&cbuf, "PNG"))
                         throw(QString("save file: cannot save image (%1x%2)").arg(image.width()).arg(image.height()));
@@ -674,7 +678,7 @@ void Score::saveFile(QIODevice* f, bool msczFormat, bool onlySelection)
             xml.tag("programRevision", revision);
             }
       else {
-            xml.stag("museScore version=\"2.00\"");
+            xml.stag("museScore version=\"2.06\"");
             }
       write(xml, onlySelection);
       xml.etag();
@@ -776,12 +780,12 @@ Score::FileError MasterScore::loadCompressedMsc(QIODevice* io, bool ignoreVersio
       //
       // load OMR page images
       //
-      if (_omr) {
-            int n = _omr->numPages();
+      if (masterScore()->omr()) {
+            int n = masterScore()->omr()->numPages();
             for (int i = 0; i < n; ++i) {
                   QString path = QString("OmrPages/page%1.png").arg(i+1);
                   QByteArray dbuf = uz.fileData(path);
-                  OmrPage* page = _omr->page(i);
+                  OmrPage* page = masterScore()->omr()->page(i);
                   QImage image;
                   if (image.loadFromData(dbuf, "PNG")) {
                         page->setImage(image);
@@ -905,7 +909,7 @@ Score::FileError MasterScore::read1(XmlReader& e, bool ignoreVersionError)
                         QString message;
                         if (mscVersion() > MSCVERSION)
                               return FileError::FILE_TOO_NEW;
-                        if (mscVersion() < 200)
+                        if (mscVersion() < 206)
                               return FileError::FILE_TOO_OLD;
                         }
 
@@ -974,8 +978,8 @@ bool Score::read(XmlReader& e)
                   _mscoreRevision = e.readInt();
             else if (tag == "Omr") {
 #ifdef OMR
-                  _omr = new Omr(this);
-                  _omr->read(e);
+                  masterScore()->setOmr(new Omr(this));
+                  masterScore()->omr()->read(e);
 #else
                   e.skipCurrentElement();
 #endif

@@ -13,6 +13,7 @@
 #include "ledgerline.h"
 #include "chord.h"
 #include "measure.h"
+#include "staff.h"
 #include "system.h"
 #include "score.h"
 
@@ -60,6 +61,8 @@ qreal LedgerLine::measureXPos() const
 void LedgerLine::layout()
       {
       setLineWidth(score()->styleS(StyleIdx::ledgerLineWidth) * chord()->mag());
+      if (staff())
+            setColor(staff()->color());
       Line::layout();
       }
 

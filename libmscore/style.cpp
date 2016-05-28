@@ -88,8 +88,10 @@ static const StyleType styleTypes[] {
       { StyleIdx::dividerRightSym,         "dividerRightSym",         QVariant(QString("systemDivider")) },
       { StyleIdx::dividerRightX,           "dividerRightX",           QVariant(0.0) },
       { StyleIdx::dividerRightY,           "dividerRightY",           QVariant(0.0) },
+
       { StyleIdx::clefLeftMargin,          "clefLeftMargin",          Spatium(0.8) },     // 0.64 (gould: <= 1)
       { StyleIdx::keysigLeftMargin,        "keysigLeftMargin",        Spatium(0.5) },
+      { StyleIdx::ambitusMargin,           "ambitusMargin",           Spatium(0.5) },
 
       { StyleIdx::timesigLeftMargin,       "timesigLeftMargin",       Spatium(0.5) },
       { StyleIdx::clefKeyRightMargin,      "clefKeyRightMargin",      Spatium(0.8) },
@@ -101,6 +103,7 @@ static const StyleType styleTypes[] {
       { StyleIdx::systemHeaderTimeSigDistance, "systemHeaderTimeSigDistance", Spatium(2.0) },  // gould: 2.0
 
       { StyleIdx::clefBarlineDistance,     "clefBarlineDistance",     Spatium(0.18) },      // was 0.5
+      { StyleIdx::timesigBarlineDistance,  "timesigBarlineDistance",  Spatium(0.5) },
       { StyleIdx::stemWidth,               "stemWidth",               Spatium(0.13) },      // 0.09375
       { StyleIdx::shortenStem,             "shortenStem",             QVariant(true) },
       { StyleIdx::shortStemProgression,    "shortStemProgression",    Spatium(0.25) },
@@ -115,13 +118,13 @@ static const StyleType styleTypes[] {
       { StyleIdx::measureSpacing,          "measureSpacing",          QVariant(1.2) },
       { StyleIdx::staffLineWidth,          "staffLineWidth",          Spatium(0.08) },      // 0.09375
       { StyleIdx::ledgerLineWidth,         "ledgerLineWidth",         Spatium(0.16) },     // 0.1875
-      { StyleIdx::ledgerLineLength,        "ledgerLineLength",        Spatium(.6) },     // note head width + this value
+      { StyleIdx::ledgerLineLength,        "ledgerLineLength",        Spatium(.6) },     // notehead width + this value
       { StyleIdx::accidentalDistance,      "accidentalDistance",      Spatium(0.22) },
       { StyleIdx::accidentalNoteDistance,  "accidentalNoteDistance",  Spatium(0.22) },
       { StyleIdx::beamWidth,               "beamWidth",               Spatium(0.5) },           // was 0.48
 
       { StyleIdx::beamDistance,            "beamDistance",            QVariant(0.5) },          // 0.25sp units
-      { StyleIdx::beamMinLen,              "beamMinLen",              Spatium(1.32) },      // 1.316178 exactly note head widthen beams
+      { StyleIdx::beamMinLen,              "beamMinLen",              Spatium(1.32) },      // 1.316178 exactly notehead widthen beams
       { StyleIdx::beamNoSlope,             "beamNoSlope",             QVariant(false) },
       { StyleIdx::dotMag,                  "dotMag",                  QVariant(1.0) },
       { StyleIdx::dotNoteDistance,         "dotNoteDistance",         Spatium(0.35) },
@@ -240,7 +243,7 @@ static const StyleType styleTypes[] {
       { StyleIdx::ottavaLineStyle,         "ottavaLineStyle",         QVariant(int(Qt::DashLine)) },
       { StyleIdx::ottavaNumbersOnly,       "ottavaNumbersOnly",       true },
       { StyleIdx::tabClef,                 "tabClef",                 QVariant(int(ClefType::TAB)) },
-      { StyleIdx::tremoloWidth,            "tremoloWidth",            Spatium(1.2) },  // tremolo stroke width: note head width
+      { StyleIdx::tremoloWidth,            "tremoloWidth",            Spatium(1.2) },  // tremolo stroke width: notehead width
       { StyleIdx::tremoloBoxHeight,        "tremoloBoxHeight",        Spatium(0.65) },
 
       { StyleIdx::tremoloStrokeWidth,      "tremoloLineWidth",        Spatium(0.5) },  // was 0.35
@@ -637,9 +640,13 @@ void MStyle::set(const StyleIdx t, const QVariant& val)
       {
       const int idx = int(t);
       _values[idx] = val;
-      qreal _spatium = value(StyleIdx::spatium).toDouble();
-      if (!strcmp(styleTypes[idx].valueType(), "Ms::Spatium"))
-            _precomputedValues[idx] = _values[idx].value<Spatium>().val() * _spatium;
+      if (t == StyleIdx::spatium)
+            precomputeValues();
+      else {
+            qreal _spatium = value(StyleIdx::spatium).toDouble();
+            if (!strcmp(styleTypes[idx].valueType(), "Ms::Spatium"))
+                  _precomputedValues[idx] = _values[idx].value<Spatium>().val() * _spatium;
+            }
       }
 
 //---------------------------------------------------------

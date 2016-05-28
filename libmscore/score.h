@@ -263,8 +263,8 @@ class CmdState {
    public:
       LayoutFlags layoutFlags;
 
-      bool _excerptsChanged;
-      bool _instrumentsChanged;
+      bool _excerptsChanged     { false };
+      bool _instrumentsChanged  { false };
 
       void reset();
       UpdateMode updateMode() const { return _updateMode; }
@@ -500,6 +500,7 @@ class Score : public QObject, public ScoreElement {
       void getNextMeasure(LayoutContext&);      // get next measure for layout
       bool collectPage(LayoutContext&);
       System* collectSystem(LayoutContext&);
+      void createBeams(Measure*);
 
    protected:
       QFileInfo info;
@@ -575,8 +576,6 @@ class Score : public QObject, public ScoreElement {
       void undoAddCR(ChordRest* element, Measure*, int tick);
       void undoRemoveElement(Element* element);
       void undoChangeElement(Element* oldElement, Element* newElement);
-      void undoChangeChordRestSize(ChordRest* cr, bool small);
-      void undoChangeChordNoStem(Chord* cr, bool noStem);
       void undoChangePitch(Note* note, int pitch, int tpc1, int tpc2);
       void undoChangeFretting(Note* note, int pitch, int string, int fret, int tpc1, int tpc2);
       void spellNotelist(std::vector<Note*>& notes);
@@ -591,7 +590,6 @@ class Score : public QObject, public ScoreElement {
       void undoInsertStaff(Staff* staff, int idx, bool createRests=true);
       void undoChangeInvisible(Element*, bool);
       void undoChangeBracketSpan(Staff* staff, int column, int span);
-      void undoChangeBracketType(Bracket* bracket, BracketType type);
       void undoChangeTuning(Note*, qreal);
       void undoChangePageFormat(PageFormat*);
       void undoChangePageFormat(PageFormat*, qreal spatium, int);
@@ -1073,8 +1071,6 @@ class Score : public QObject, public ScoreElement {
 
       bool checkKeys();
       bool checkClefs();
-
-      void switchToPageMode();
 
       QFileInfo* fileInfo()               { return &info; }
       const QFileInfo* fileInfo() const   { return &info; }

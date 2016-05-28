@@ -130,19 +130,19 @@ endif(APPLE)
 
 string(REPLACE ";" ";-I" INC "${QT_INCLUDES}")
 
-if (APPLE)
+if (APPLE AND (CMAKE_VERSION VERSION_LESS "3.5.0"))
 set_target_properties (
       testutils
       PROPERTIES
       COMPILE_FLAGS "-include all.h -D TESTROOT=\\\\\"${PROJECT_SOURCE_DIR}\\\\\" -g -Wall -Wextra"
       )
-else (APPLE)
+else (APPLE AND (CMAKE_VERSION VERSION_LESS "3.5.0"))
 set_target_properties (
       testutils
       PROPERTIES
       COMPILE_FLAGS "-include all.h -D TESTROOT=\\\"${PROJECT_SOURCE_DIR}\\\" -g -Wall -Wextra"
       )
-endif(APPLE)
+endif (APPLE AND (CMAKE_VERSION VERSION_LESS "3.5.0"))
 
 #      COMPILE_FLAGS "-include all.h -I ${INC} -D TESTROOT=\\\"${PROJECT_SOURCE_DIR}\\\" -g -Wall -Wextra"
 
@@ -167,7 +167,7 @@ subdirs (
         libmscore/clef_courtesy
         libmscore/concertpitch
         libmscore/copypaste
-#        libmscore/copypastesymbollist # FAIL
+        libmscore/copypastesymbollist # FAIL
         libmscore/dynamic
 #        libmscore/earlymusic          # FAIL
         libmscore/element
@@ -186,8 +186,8 @@ subdirs (
         libmscore/selectionfilter
         libmscore/selectionrangedelete
 #        libmscore/spanners            # FAIL
-        libmscore/split                # FAIL
-        libmscore/splitstaff           # FAIL
+        libmscore/split
+        libmscore/splitstaff
         libmscore/timesig
         libmscore/tools                # some tests disabled
         libmscore/transpose
@@ -196,7 +196,7 @@ subdirs (
         importmidi
         capella
         biab
-#        musicxml                      # FAIL
+        musicxml                      # FAIL
 #        guitarpro
 #        scripting
 #        testoves                      # FAIL

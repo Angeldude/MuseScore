@@ -380,34 +380,6 @@ class ChangeElement : public UndoCommand {
       };
 
 //---------------------------------------------------------
-//   ChangeChordRestSize
-//---------------------------------------------------------
-
-class ChangeChordRestSize : public UndoCommand {
-      ChordRest* cr;
-      bool small;
-      void flip();
-
-   public:
-      ChangeChordRestSize(ChordRest*, bool small);
-      UNDO_NAME("ChangeChordRestSize")
-      };
-
-//---------------------------------------------------------
-//   ChangeChordNoStem
-//---------------------------------------------------------
-
-class ChangeChordNoStem : public UndoCommand {
-      Chord* chord;
-      bool noStem;
-      void flip();
-
-   public:
-      ChangeChordNoStem(Chord*, bool noStem);
-      UNDO_NAME("ChangeChordNoStem")
-      };
-
-//---------------------------------------------------------
 //   ChangeBarLineSpan
 //---------------------------------------------------------
 
@@ -862,21 +834,6 @@ class ChangeImage : public UndoCommand {
       };
 
 //---------------------------------------------------------
-//   ChangeDuration
-//---------------------------------------------------------
-
-class ChangeDuration : public UndoCommand {
-      ChordRest* cr;
-      Fraction d;
-
-      void flip();
-
-   public:
-      ChangeDuration(ChordRest* _cr, Fraction _d) : cr(_cr), d(_d) {}
-      UNDO_NAME("ChangeDuration")
-      };
-
-//---------------------------------------------------------
 //   AddExcerpt
 //---------------------------------------------------------
 
@@ -1027,22 +984,6 @@ class MoveStaff : public UndoCommand {
    public:
       MoveStaff(Staff* s, Part* p, int idx) : staff(s), part(p), rstaff(idx) {}
       UNDO_NAME("MoveStaff")
-      };
-
-//---------------------------------------------------------
-//   ChangeDurationType
-//---------------------------------------------------------
-
-class ChangeDurationType : public UndoCommand {
-      ChordRest* cr;
-      TDuration t;
-
-      void flip();
-
-   public:
-      ChangeDurationType(ChordRest* _cr, TDuration _t)
-         : cr(_cr), t(_t) {}
-      UNDO_NAME("ChangeDurationType")
       };
 
 //---------------------------------------------------------

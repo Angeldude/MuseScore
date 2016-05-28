@@ -72,8 +72,8 @@ ChordRest::ChordRest(Score* s)
       _staffMove   = 0;
       _beam        = 0;
       _tabDur      = 0;
-      _beamMode    = Beam::Mode::AUTO;
       _up          = true;
+      _beamMode    = Beam::Mode::AUTO;
       _small       = false;
       _crossMeasure = CrossMeasure::UNKNOWN;
       }
@@ -273,7 +273,7 @@ bool ChordRest::readProperties(XmlReader& e)
                         setDuration(actualDurationType().fraction());
                   }
             else {
-                  if (score()->mscVersion() < 115) {
+                  if (score()->mscVersion() <= 114) {
                         SigEvent event = score()->sigmap()->timesig(e.tick());
                         setDuration(event.timesig());
                         }
@@ -460,6 +460,49 @@ void ChordRest::setSmall(bool val)
 void ChordRest::undoSetSmall(bool val)
       {
       undoChangeProperty(P_ID::SMALL, val);
+      }
+
+//---------------------------------------------------------
+//   layout0
+//---------------------------------------------------------
+
+void ChordRest::layout0(AccidentalState* as)
+      {
+      qreal m = staff()->mag();
+      if (small())
+            m *= score()->styleD(StyleIdx::smallNoteMag);
+
+      if (isChord()) {
+            Chord* chord = toChord(this);
+            for (Chord* c : chord->graceNotes())
+                  c->layout0(as);
+            if (chord->isGrace())
+                  m *= score()->styleD(StyleIdx::graceNoteMag);
+            else
+                  chord->cmdUpdateNotes(as);
+
+            const Drumset* drumset = 0;
+            if (part()->instrument()->useDrumset())
+                  drumset = part()->instrument()->drumset();
+            if (drumset) {
+                  for (Note* note : chord->notes()) {
+                        int pitch = note->pitch();
+                        if (!drumset->isValid(pitch)) {
+                              // qDebug("unmapped drum note %d", pitch);
+                              }
+                        else if (!note->fixed()) {
+                              note->undoChangeProperty(P_ID::HEAD_GROUP, int(drumset->noteHead(pitch)));
+                              // note->setHeadGroup(drumset->noteHead(pitch));
+                              note->setLine(drumset->line(pitch));
+                              continue;
+                              }
+                        }
+                  }
+            chord->computeUp();
+            chord->layoutStem1();   // create stems needed to calculate spacing
+                                    // stem direction can change later during beam processing
+            }
+      setMag(m);
       }
 
 //---------------------------------------------------------
@@ -767,7 +810,7 @@ Element* ChordRest::drop(const DropData& data)
       switch (e->type()) {
             case Element::Type::BREATH:
                   {
-                  Breath* b = static_cast<Breath*>(e);
+                  Breath* b = toBreath(e);
                   int track = staffIdx() * VOICES;
                   b->setTrack(track);
 
@@ -1169,27 +1212,8 @@ void ChordRest::removeDeleteBeam(bool beamed)
             if (b->empty())
                   score()->undoRemoveElement(b);
             }
-      if (!beamed && isChord()) {
-            Chord* chord = toChord(this);
-            int hookIdx  = durationType().hooks();
-
-            if (hookIdx && !(chord->noStem() || measure()->slashStyle(staffIdx()))) {
-                  if (!chord->hook()) {
-                        Hook* hook = new Hook(score());
-                        hook->setParent(chord);
-                        hook->setGenerated(true);
-                        score()->undoAddElement(hook);
-                        }
-                  chord->hook()->setHookType(up() ? hookIdx : -hookIdx);
-                  chord->layoutStem();
-                  return;
-                  }
-            if (chord->hook())
-                  score()->undoRemoveElement(chord->hook());
-//            if (chord->stem() && !chord->isGrace())
-            if (chord->stem())
-                  chord->layoutStem();
-            }
+      if (!beamed && isChord())
+            toChord(this)->layoutStem();
       }
 
 //---------------------------------------------------------
@@ -1207,7 +1231,7 @@ void ChordRest::undoSetBeamMode(Beam::Mode mode)
 
 QVariant ChordRest::getProperty(P_ID propertyId) const
       {
-      switch(propertyId) {
+      switch (propertyId) {
             case P_ID::SMALL:      return QVariant(small());
             case P_ID::BEAM_MODE:  return int(beamMode());
             case P_ID::STAFF_MOVE: return staffMove();
@@ -1222,7 +1246,7 @@ QVariant ChordRest::getProperty(P_ID propertyId) const
 
 bool ChordRest::setProperty(P_ID propertyId, const QVariant& v)
       {
-      switch(propertyId) {
+      switch (propertyId) {
             case P_ID::SMALL:      setSmall(v.toBool()); break;
             case P_ID::BEAM_MODE:  setBeamMode(Beam::Mode(v.toInt())); break;
             case P_ID::STAFF_MOVE: setStaffMove(v.toInt()); break;
@@ -1246,7 +1270,7 @@ bool ChordRest::setProperty(P_ID propertyId, const QVariant& v)
 
 QVariant ChordRest::propertyDefault(P_ID propertyId) const
       {
-      switch(propertyId) {
+      switch (propertyId) {
             case P_ID::SMALL:      return false;
             case P_ID::BEAM_MODE:  return int(Beam::Mode::AUTO);
             case P_ID::STAFF_MOVE: return 0;

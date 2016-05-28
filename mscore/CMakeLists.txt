@@ -127,6 +127,7 @@ QT5_WRAP_UI (ui_headers
       inspector/inspector_bend.ui
       inspector/inspector_arpeggio.ui
       inspector/inspector_tremolo.ui
+      inspector/inspector_caesura.ui
       ${SCRIPT_UI}
       )
 
@@ -283,6 +284,7 @@ add_executable ( ${ExecutableName}
       logindialog.cpp loginmanager.cpp uploadscoredialog.cpp breaksdialog.cpp searchComboBox.cpp
       help.cpp help.h
 
+
       ${OMR_FILES}
       ${AUDIO}
       ${SCRIPT_FILES}
@@ -389,7 +391,7 @@ if (MINGW)
       )
 
    if (OMR)
-      target_link_libraries(mscore omr fitz jbig2dec jpeg openjpeg)
+      target_link_libraries(mscore omr poppler)
       if (OCR)
             target_link_libraries(mscore tesseract_api)
       endif (OCR)
@@ -490,7 +492,7 @@ else (MINGW)
       )
 
    if (OMR)
-      target_link_libraries(mscore omr fitz fontconfig jbig2dec jpeg openjpeg)
+      target_link_libraries(mscore omr poppler)
       if (OCR)
             target_link_libraries(mscore tesseract_api)
       endif (OCR)

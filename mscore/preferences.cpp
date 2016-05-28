@@ -72,8 +72,8 @@ void Preferences::init()
 
       bgUseColor         = true;
       fgUseColor         = true;
-      bgWallpaper        = QString();
-      fgWallpaper        = ":/data/paper5.png";
+      bgWallpaper        = (QFileInfo(QString("%1%2").arg(mscoreGlobalShare).arg("wallpaper/background1.png")).absoluteFilePath());
+      fgWallpaper        = (QFileInfo(QString("%1%2").arg(mscoreGlobalShare).arg("wallpaper/paper5.png")).absoluteFilePath());
       fgColor.setNamedColor("#f9f9f9");
       pianoHlColor.setNamedColor("#1259d0");
       iconHeight         = 24;
@@ -1149,7 +1149,7 @@ void PreferenceDialog::selectInstrumentList1()
          this,
          tr("Choose Instrument List"),
          instrumentList1->text(),
-         tr("Instrument List (*.xml)"),
+         tr("Instrument List") + " (*.xml)",
          0,
          preferences.nativeDialogs ? QFileDialog::Options() : QFileDialog::DontUseNativeDialog
          );
@@ -1167,7 +1167,7 @@ void PreferenceDialog::selectInstrumentList2()
          this,
          tr("Choose Instrument List"),
          instrumentList2->text(),
-         tr("Instrument List (*.xml)"),
+         tr("Instrument List") + " (*.xml)",
          0,
          preferences.nativeDialogs ? QFileDialog::Options() : QFileDialog::DontUseNativeDialog
          );
@@ -1185,7 +1185,7 @@ void PreferenceDialog::selectStartWith()
          this,
          tr("Choose Starting Score"),
          sessionScore->text(),
-         tr("MuseScore Files (*.mscz *.mscx);;All (*)"),
+         tr("MuseScore Files") + " (*.mscz *.mscx);;" + tr("All") + " (*)",
          0,
          preferences.nativeDialogs ? QFileDialog::Options() : QFileDialog::DontUseNativeDialog
          );

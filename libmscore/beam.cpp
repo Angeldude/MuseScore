@@ -271,6 +271,8 @@ bool Beam::twoBeamedNotes()
 
 //---------------------------------------------------------
 //   layout1
+//    - remove beam segments
+//    - calculate stem direction and set chord
 //---------------------------------------------------------
 
 void Beam::layout1()
@@ -289,8 +291,8 @@ void Beam::layout1()
             //    UP or DOWN according to TAB duration position
             //    slope 0
             _up   = !staff()->staffType()->stemsDown();
-            slope = 0.0;
-            _cross = false;
+            slope   = 0.0;
+            _cross  = false;
             minMove = maxMove = 0;              // no cross-beaming in TAB's!
             for (ChordRest* cr : _elements) {
                   if (cr->isChord()) {
@@ -381,7 +383,6 @@ void Beam::layout1()
                         _up = true;
                   }
 
-
             _cross = minMove < maxMove;
             if (minMove == 1 && maxMove == 1)
                   setTrack(staffIdx * VOICES + voice());
@@ -389,13 +390,20 @@ void Beam::layout1()
             // int idx = (_direction == Direction::AUTO || _direction == Direction::DOWN) ? 0 : 1;
             slope = 0.0;
 
-            for (ChordRest* cr : _elements) {
-                  // leave initial guess alone for moved chords within a beam that crosses staves
-                  // otherwise, assume beam direction is stem direction
-                  if (!_cross || !cr->staffMove())
-                        cr->setUp(_up);
-                  }
+            // leave initial guess alone for moved chords within a beam that crosses staves
+            // otherwise, assume beam direction is stem direction
 
+            for (ChordRest* cr : _elements) {
+                  if (!cr->isChord())
+                        continue;
+                  Chord* chord = toChord(cr);
+                  if (!(_cross || chord->staffMove())) {
+                        if (chord->up() != _up) {
+                              chord->setUp(_up);
+                              chord->layoutStem1();
+                              }
+                        }
+                  }
             }     // end of if/else(tablature)
       }
 
@@ -459,8 +467,11 @@ void Beam::layoutGraceNotes()
       slope   = 0.0;
 
       if (!_userModified[idx]) {
-            for (ChordRest* cr : _elements)
+            for (ChordRest* cr : _elements) {
                   cr->setUp(_up);
+                  if (cr->isChord())
+                        toChord(cr)->layoutStem1();            /* create stems needed to calculate horizontal spacing */
+                  }
             }
       }
 
@@ -1914,7 +1925,6 @@ void Beam::layout2(std::vector<ChordRest*>crl, SpannerSegmentType, int frag)
             if (!cr->isChord())
                   continue;
             Chord* c = toChord(cr);
-            c->layoutStem1();
             if (c->hook())
                   score()->undoRemoveElement(c->hook());
 
@@ -1941,14 +1951,19 @@ void Beam::layout2(std::vector<ChordRest*>crl, SpannerSegmentType, int frag)
                         }
                   by = 0;
                   }
-            Stem* stem = c->stem();
+
+            Stem* stem   = c->stem();
+            Shape& shape = c->segment()->staffShape(c->vStaffIdx());
+
             if (stem) {
-                  qreal sw2  = score()->styleP(StyleIdx::stemWidth) * .5;
-                  if (cr->up())
+                  shape.remove(stem->shape());
+
+                  qreal sw2  = stem->lineWidth() * .5;
+                  if (c->up())
                         sw2 = -sw2;
-                  stem->setLen(y2 - (by + _pagePos.y()));
                   stem->rxpos() = c->stemPosX() + sw2;
-                  Shape& shape = cr->segment()->staffShape(cr->vStaffIdx());
+                  stem->setLen(y2 - (by + _pagePos.y()));
+
                   shape.add(stem->shape());
                   }
 
@@ -2172,7 +2187,7 @@ void Beam::reset()
             score()->undoChangeProperty(this, P_ID::USER_MODIFIED, false);
             }
       if (beamDirection() != Direction::AUTO)
-            score()->undoChangeProperty(this, P_ID::STEM_DIRECTION, int(Direction::AUTO));
+            score()->undoChangeProperty(this, P_ID::STEM_DIRECTION, Direction(Direction::AUTO));
       if (noSlopeStyle == PropertyStyle::UNSTYLED)
             score()->undoChangeProperty(this, P_ID::BEAM_NO_SLOPE, propertyDefault(P_ID::BEAM_NO_SLOPE), PropertyStyle::STYLED);
 

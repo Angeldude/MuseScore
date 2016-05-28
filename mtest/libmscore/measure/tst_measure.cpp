@@ -187,10 +187,10 @@ void TestMeasure::minWidth()
       {
       MasterScore* score = readScore(DIR + "measure-2.mscx");
 
-      int n = score->systems().size();
-      int measuresSystem[n];
-      for (int i = 0; i < n; ++i)
-            measuresSystem[i] = score->systems().at(i)->measures().size();
+//      int n = score->systems().size();
+//      int measuresSystem[n];
+//      for (int i = 0; i < n; ++i)
+//            measuresSystem[i] = score->systems().at(i)->measures().size();
 
       score->doLayout();
 

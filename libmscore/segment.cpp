@@ -767,10 +767,12 @@ void Segment::checkEmpty() const
 //   tick
 //---------------------------------------------------------
 
+#if 0
 int Segment::tick() const
       {
       return _tick + measure()->tick();
       }
+#endif
 
 //---------------------------------------------------------
 //   setTick
@@ -1332,7 +1334,8 @@ void Segment::createShape(int staffIdx)
                   s.add(e->shape());
             }
       for (Element* e : _annotations) {
-            if (e->staffIdx() == staffIdx && e->visible())
+            // probably only allow for lyrics and chordnames
+            if (e->staffIdx() == staffIdx && e->visible() && !e->isTempoText() && !e->isStaffText())
                   s.add(e->shape());
             }
       }
@@ -1359,18 +1362,22 @@ qreal Segment::minRight() const
 qreal Segment::minLeft(const Shape& sl) const
       {
       qreal distance = 0.0;
-      for (const Shape& sh : shapes())
-            distance = qMax(distance, sl.minHorizontalDistance(sh));
-
+      for (const Shape& sh : shapes()) {
+            qreal d = sl.minHorizontalDistance(sh);
+            if (d > distance)
+                  distance = d;
+            }
       return distance;
       }
 
 qreal Segment::minLeft() const
       {
       qreal distance = 0.0;
-      for (const Shape& sh : shapes())
-            distance = qMax(distance, sh.left());
-
+      for (const Shape& sh : shapes()) {
+            qreal l = sh.left();
+            if (l > distance)
+                  distance = l;
+            }
       return distance;
       }
 
@@ -1410,9 +1417,12 @@ qreal Segment::minHorizontalDistance(Segment* ns, bool systemHeaderGap) const
                   }
             else
                   d = score()->styleP(StyleIdx::barNoteDistance);
-            d -= ns->minLeft() * .7;      // hack
-            d = qMax(d, spatium());       // minimum distance is one spatium
-            w = qMax(w, minRight()) + d;
+            qreal dd = minRight() + ns->minLeft() + spatium();
+            w = qMax(d, dd);
+            // d -= ns->minLeft() * .7;      // hack
+            // d = qMax(d, ns->minLeft());
+            // d = qMax(d, spatium());       // minimum distance is one spatium
+            // w = qMax(w, minRight()) + d;
             }
       else if (st == Segment::Type::Clef) {
             if (nst == Segment::Type::KeySig)
@@ -1421,6 +1431,8 @@ qreal Segment::minHorizontalDistance(Segment* ns, bool systemHeaderGap) const
                   w += score()->styleP(StyleIdx::clefTimesigDistance);
             else if (nst & (Segment::Type::EndBarLine | Segment::Type::StartRepeatBarLine))
                   w += score()->styleP(StyleIdx::clefBarlineDistance);
+            else if (nst == Segment::Type::Ambitus)
+                  w += score()->styleP(StyleIdx::ambitusMargin);
             }
       else if ((st & (Segment::Type::KeySig | Segment::Type::KeySigAnnounce))
          && (nst & (Segment::Type::TimeSig | Segment::Type::TimeSigAnnounce))) {
@@ -1432,12 +1444,19 @@ qreal Segment::minHorizontalDistance(Segment* ns, bool systemHeaderGap) const
             w += score()->styleP(StyleIdx::noteBarDistance);
       else if (st == Segment::Type::BeginBarLine && nst == Segment::Type::Clef)
             w += score()->styleP(StyleIdx::clefLeftMargin);
-      else if (st == Segment::Type::EndBarLine && nst == Segment::Type::KeySigAnnounce)
-            w += score()->styleP(StyleIdx::keysigLeftMargin);
-      else if (st == Segment::Type::EndBarLine && nst == Segment::Type::TimeSigAnnounce)
-            w += score()->styleP(StyleIdx::timesigLeftMargin);
+      else if (st == Segment::Type::EndBarLine) {
+            if (nst == Segment::Type::KeySigAnnounce)
+                  w += score()->styleP(StyleIdx::keysigLeftMargin);
+            else if (nst == Segment::Type::TimeSigAnnounce)
+                  w += score()->styleP(StyleIdx::timesigLeftMargin);
+            }
+      else if (st == Segment::Type::TimeSig && nst == Segment::Type::StartRepeatBarLine)
+            w += score()->styleP(StyleIdx::timesigBarlineDistance);
       else if (st == Segment::Type::Breath)
             w += spatium() * 1.5;
+      else if (st == Segment::Type::Ambitus)
+            w += score()->styleP(StyleIdx::ambitusMargin);
+
       if (w < 0.0)
             w = 0.0;
       if (ns)

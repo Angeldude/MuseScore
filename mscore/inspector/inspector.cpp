@@ -54,6 +54,7 @@
 #include "libmscore/tuplet.h"
 #include "libmscore/bend.h"
 #include "libmscore/tremolobar.h"
+#include "libmscore/slur.h"
 
 namespace Ms {
 
@@ -255,6 +256,9 @@ void Inspector::setElements(const QList<Element*>& l)
                               break;
                         case Element::Type::ARPEGGIO:
                               ie = new InspectorArpeggio(this);
+                              break;
+                        case Element::Type::BREATH:
+                              ie = new InspectorCaesura(this);
                               break;
                         default:
                               if (_element->isText()) {
@@ -636,11 +640,12 @@ InspectorAccidental::InspectorAccidental(QWidget* parent)
       a.setupUi(addWidget());
 
       iList = {
-            { P_ID::COLOR,        0, 0, e.color,       e.resetColor       },
-            { P_ID::VISIBLE,      0, 0, e.visible,     e.resetVisible     },
-            { P_ID::USER_OFF,     0, 0, e.offsetX,     e.resetX           },
-            { P_ID::USER_OFF,     1, 0, e.offsetY,     e.resetY           },
-            { P_ID::SMALL,        0, 0, a.small,       a.resetSmall       }
+            { P_ID::COLOR,               0, 0, e.color,       e.resetColor       },
+            { P_ID::VISIBLE,             0, 0, e.visible,     e.resetVisible     },
+            { P_ID::USER_OFF,            0, 0, e.offsetX,     e.resetX           },
+            { P_ID::USER_OFF,            1, 0, e.offsetY,     e.resetY           },
+            { P_ID::SMALL,               0, 0, a.small,       a.resetSmall       },
+            { P_ID::ACCIDENTAL_BRACKET,  0, 0, a.hasBracket,  a.resetHasBracket  }
             };
       mapSignals();
       }
@@ -894,6 +899,35 @@ InspectorSlur::InspectorSlur(QWidget* parent)
       {
       e.setupUi(addWidget());
       s.setupUi(addWidget());
+
+      Inspector* inspector = static_cast<Inspector*>(parent);
+
+      if (inspector != nullptr) {
+            Element* e = inspector->element();
+            bool sameType = true;
+            Element::Type subtype = Element::Type::INVALID;
+
+            if (e->type() == Element::Type::SLUR_SEGMENT)
+                  subtype = toSlurSegment(e)->spanner()->type();
+
+            for (const auto& ee : inspector->el()) {
+                  if (ee->type() != Element::Type::SLUR_SEGMENT) {
+                        sameType = false;
+                        break;
+                        }
+                  if (toSlurSegment(ee)->spanner()->type() != subtype) {
+                        sameType = false;
+                        break;
+                        }
+                  }
+
+            if (!sameType)
+                  s.elementName->setText("Slur/Tie");
+            else if (subtype == Element::Type::SLUR)
+                  s.elementName->setText(tr("Slur"));
+            else if (subtype == Element::Type::TIE)
+                  s.elementName->setText(tr("Tie"));
+            }
 
       iList = {
             { P_ID::COLOR,           0, 0, e.color,         e.resetColor         },
@@ -1162,6 +1196,25 @@ void InspectorBarLine::blockSpanDataSignals(bool val)
       b.span->blockSignals(val);
       b.spanFrom->blockSignals(val);
       b.spanTo->blockSignals(val);
+      }
+
+//---------------------------------------------------------
+//   InspectorRest
+//---------------------------------------------------------
+
+InspectorCaesura::InspectorCaesura(QWidget* parent) : InspectorBase(parent)
+      {
+      e.setupUi(addWidget());
+      c.setupUi(addWidget());
+
+      iList = {
+            { P_ID::COLOR,          0, 0, e.color,         e.resetColor         },
+            { P_ID::VISIBLE,        0, 0, e.visible,       e.resetVisible       },
+            { P_ID::USER_OFF,       0, 0, e.offsetX,       e.resetX             },
+            { P_ID::USER_OFF,       1, 0, e.offsetY,       e.resetY             },
+            { P_ID::PAUSE,          0, 0, c.pause,         c.resetPause         }
+            };
+      mapSignals();
       }
 
 }

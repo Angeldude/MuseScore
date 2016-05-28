@@ -83,7 +83,7 @@ extern Measure* tick2measure(int tick);
 
 //---------------------------------------------------------
 //   updateNoteLines
-//    compute line position of note heads after
+//    compute line position of noteheads after
 //    clef change
 //---------------------------------------------------------
 
@@ -456,7 +456,8 @@ void Score::undoChangeFretting(Note* note, int pitch, int string, int fret, int 
 void Score::undoChangeKeySig(Staff* ostaff, int tick, KeySigEvent key)
       {
       KeySig* lks = 0;
-      foreach (Staff* staff, ostaff->staffList()) {
+
+      for (Staff* staff : ostaff->staffList()) {
             if (staff->isDrumStaff())
                   continue;
 
@@ -469,10 +470,10 @@ void Score::undoChangeKeySig(Staff* ostaff, int tick, KeySigEvent key)
             Segment* s   = measure->undoGetSegment(Segment::Type::KeySig, tick);
             int staffIdx = staff->idx();
             int track    = staffIdx * VOICES;
-            KeySig* ks   = static_cast<KeySig*>(s->element(track));
+            KeySig* ks   = toKeySig(s->element(track));
 
             Interval interval = staff->part()->instrument(tick)->transpose();
-            KeySigEvent nkey = key;
+            KeySigEvent nkey  = key;
             bool concertPitch = score->styleB(StyleIdx::concertPitch);
             if (interval.chromatic && !concertPitch && !nkey.custom() && !nkey.isAtonal()) {
                   interval.flip();
@@ -489,7 +490,7 @@ void Score::undoChangeKeySig(Staff* ostaff, int tick, KeySigEvent key)
                   nks->setKeySigEvent(nkey);
                   undo(new AddElement(nks));
                   if (lks)
-                        lks->linkTo(nks);
+                        undo(new Link(lks, nks));
                   else
                         lks = nks;
                   }
@@ -777,39 +778,12 @@ void Score::undoInsertStaff(Staff* staff, int ridx, bool createRests)
       }
 
 //---------------------------------------------------------
-//   undoChangeChordRestSize
-//---------------------------------------------------------
-
-void Score::undoChangeChordRestSize(ChordRest* cr, bool small)
-      {
-      undo(new ChangeChordRestSize(cr, small));
-      }
-
-//---------------------------------------------------------
-//   undoChangeChordNoStem
-//---------------------------------------------------------
-
-void Score::undoChangeChordNoStem(Chord* cr, bool noStem)
-      {
-      undo(new ChangeChordNoStem(cr, noStem));
-      }
-
-//---------------------------------------------------------
 //   undoChangeBracketSpan
 //---------------------------------------------------------
 
 void Score::undoChangeBracketSpan(Staff* staff, int column, int span)
       {
       undo(new ChangeBracketSpan(staff, column, span));
-      }
-
-//---------------------------------------------------------
-//   undoChangeBracketType
-//---------------------------------------------------------
-
-void Score::undoChangeBracketType(Bracket* bracket, BracketType type)
-      {
-      undo(new ChangeBracketType(bracket, type));
       }
 
 //---------------------------------------------------------
@@ -2038,40 +2012,6 @@ void ChangeMeasureLen::flip()
       }
 
 //---------------------------------------------------------
-//   ChangeChordRestSize
-//---------------------------------------------------------
-
-ChangeChordRestSize::ChangeChordRestSize(ChordRest* _cr, bool _small)
-      {
-      cr = _cr;
-      small = _small;
-      }
-
-void ChangeChordRestSize::flip()
-      {
-      bool s = cr->small();
-      cr->setSmall(small);
-      small = s;
-      }
-
-//---------------------------------------------------------
-//   ChangeChordNoStem
-//---------------------------------------------------------
-
-ChangeChordNoStem::ChangeChordNoStem(Chord* c, bool f)
-      {
-      chord = c;
-      noStem = f;
-      }
-
-void ChangeChordNoStem::flip()
-      {
-      bool ns = chord->noStem();
-      chord->setNoStem(noStem);
-      noStem = ns;
-      }
-
-//---------------------------------------------------------
 //   ChangeBarLineSpan
 //---------------------------------------------------------
 
@@ -2227,25 +2167,6 @@ void ChangeBracketSpan::flip()
       staff->setBracketSpan(column, span);
       span = oSpan;
       staff->score()->setLayoutAll();
-      }
-
-//---------------------------------------------------------
-//   ChangeBracketType
-//---------------------------------------------------------
-
-ChangeBracketType::ChangeBracketType(Bracket* b, BracketType t)
-      {
-      bracket  = b;
-      type = t;
-      }
-
-void ChangeBracketType::flip()
-      {
-      BracketType oType  = bracket->bracketType();
-      bracket->setBracketType(type);
-      type = oType;
-      bracket->staff()->setBracket(bracket->level(), bracket->bracketType());
-      bracket->staff()->score()->setLayoutAll();
       }
 
 //---------------------------------------------------------
@@ -2522,7 +2443,7 @@ static void updateTextStyle(void* a, Element* e)
             Text* text = static_cast<Text*>(e);
             if (text->textStyle().name() == s) {
                   text->setTextStyle(text->score()->textStyle(s));
-                  text->textStyleChanged();
+                  text->styleChanged();
                   }
             }
       }
@@ -2974,17 +2895,6 @@ void ChangeImage::flip()
       }
 
 //---------------------------------------------------------
-//   flip
-//---------------------------------------------------------
-
-void ChangeDuration::flip()
-      {
-      Fraction od = cr->duration();
-      cr->setDuration(d);
-      d = od;
-      }
-
-//---------------------------------------------------------
 //   AddExcerpt::undo
 //---------------------------------------------------------
 
@@ -3166,17 +3076,6 @@ void MoveStaff::flip()
       part = oldPart;
       rstaff = idx;
       staff->score()->setLayoutAll();
-      }
-
-//---------------------------------------------------------
-//   ChangeDurationType::flip
-//---------------------------------------------------------
-
-void ChangeDurationType::flip()
-      {
-      TDuration type = cr->durationType();
-      cr->setDurationType(t);
-      t = type;
       }
 
 //---------------------------------------------------------

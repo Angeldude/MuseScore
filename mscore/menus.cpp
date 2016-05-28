@@ -325,28 +325,28 @@ Palette* MuseScore::newBarLinePalette(bool basic)
             const BarLineTableItem* bti = BarLine::barLineTableItem(i);
             if (!bti)
                   break;
-            BarLine* b  = new BarLine(gscore);
+            BarLine* b = new BarLine(gscore);
             b->setBarLineType(bti->type);
-            sp->append(b, qApp->translate("Palette", bti->name));
+            sp->append(b, BarLine::userTypeName(bti->type));
             }
 
       if (!basic) {
       // bar line spans
             struct {
                   int         from, to;
-                  const char* name;
-                  } span[] = {
+                  const char* userName;
+                  } spans[] = {
                   { BARLINE_SPAN_TICK1_FROM, BARLINE_SPAN_TICK1_TO, QT_TRANSLATE_NOOP("Palette", "Tick 1 span") },
                   { BARLINE_SPAN_TICK2_FROM, BARLINE_SPAN_TICK2_TO, QT_TRANSLATE_NOOP("Palette", "Tick 2 span") },
                   { BARLINE_SPAN_SHORT1_FROM,BARLINE_SPAN_SHORT1_TO,QT_TRANSLATE_NOOP("Palette", "Short 1 span") },
                   { BARLINE_SPAN_SHORT2_FROM,BARLINE_SPAN_SHORT2_TO,QT_TRANSLATE_NOOP("Palette", "Short 2 span") },
                   };
-            for (unsigned i = 0; i < sizeof(span)/sizeof(*span); ++i) {
-                  BarLine* b  = new BarLine(gscore);
+            for (auto span : spans) {
+                  BarLine* b = new BarLine(gscore);
                   b->setBarLineType(BarLineType::NORMAL);
-                  b->setSpanFrom(span[i].from);
-                  b->setSpanTo(span[i].to);
-                  sp->append(b, qApp->translate("Palette", span[i].name));
+                  b->setSpanFrom(span.from);
+                  b->setSpanTo(span.to);
+                  sp->append(b, qApp->translate("Palette", span.userName));
                   }
             }
       return sp;
@@ -380,6 +380,25 @@ Palette* MuseScore::newRepeatsPalette()
             Jump* jp = new Jump(gscore);
             jp->setJumpType(jumpTypeTable[i].type);
             sp->append(jp, qApp->translate("jumpType", jumpTypeTable[i].userText.toUtf8().constData()));
+            }
+
+      for (unsigned i = 0;; ++i) {
+            const BarLineTableItem* bti = BarLine::barLineTableItem(i);
+            if (!bti)
+                  break;
+            switch (bti->type) {
+                  case BarLineType::START_REPEAT:
+                  case BarLineType::END_REPEAT:
+                  case BarLineType::END_START_REPEAT:
+                        break;
+                  default:
+                        continue;
+                  }
+
+            BarLine* b = new BarLine(gscore);
+            b->setBarLineType(bti->type);
+            PaletteCell* cell= sp->append(b, BarLine::userTypeName(bti->type));
+            cell->drawStaff = false;
             }
 
       return sp;
@@ -501,7 +520,7 @@ Palette* MuseScore::newTremoloPalette()
 Palette* MuseScore::newNoteHeadsPalette()
       {
       Palette* sp = new Palette;
-      sp->setName(QT_TRANSLATE_NOOP("Palette", "Note Heads"));
+      sp->setName(QT_TRANSLATE_NOOP("Palette", "Noteheads"));
       sp->setMag(1.3);
       sp->setGrid(33, 36);
       sp->setDrawGrid(true);
@@ -992,15 +1011,16 @@ void MuseScore::showPalette(bool visible)
 struct TempoPattern {
       QString pattern;
       double f;
+      bool relative;
 
-      TempoPattern(const QString& s, double v) : pattern(s), f(v) {}
+      TempoPattern(const QString& s, double v, bool relative) : pattern(s), f(v), relative(relative) {}
       };
 
 //---------------------------------------------------------
 //   newTempoPalette
 //---------------------------------------------------------
 
-Palette* MuseScore::newTempoPalette()
+Palette* MuseScore::newTempoPalette(bool basic)
       {
       Palette* sp = new Palette;
       sp->setName(QT_TRANSLATE_NOOP("Palette", "Tempo"));
@@ -1008,24 +1028,34 @@ Palette* MuseScore::newTempoPalette()
       sp->setGrid(60, 30);
       sp->setDrawGrid(true);
 
-      static const TempoPattern tp[] = {
-            TempoPattern("<sym>metNoteHalfUp</sym> = 80", 80.0/30.0),                    // 1/2
-            TempoPattern("<sym>metNoteQuarterUp</sym> = 80", 80.0/60.0),                 // 1/4
-            TempoPattern("<sym>metNote8thUp</sym> = 80", 80.0/120.0),                    // 1/8
-            TempoPattern("<sym>metNoteHalfUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = 80", 120/30.0),       // dotted 1/2
-            TempoPattern("<sym>metNoteQuarterUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = 80", 120/60.0),    // dotted 1/4
-            TempoPattern("<sym>metNote8thUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = 80", 120/120.0),       // dotted 1/8
+      static const TempoPattern tps[] = {
+            TempoPattern("<sym>metNoteHalfUp</sym> = 80", 80.0/30.0, false),                    // 1/2
+            TempoPattern("<sym>metNoteQuarterUp</sym> = 80", 80.0/60.0, false),                 // 1/4
+            TempoPattern("<sym>metNote8thUp</sym> = 80", 80.0/120.0, false),                    // 1/8
+            TempoPattern("<sym>metNoteHalfUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = 80", 120/30.0, false),       // dotted 1/2
+            TempoPattern("<sym>metNoteQuarterUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = 80", 120/60.0, false),    // dotted 1/4
+            TempoPattern("<sym>metNote8thUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = 80", 120/120.0, false),       // dotted 1/8
+            TempoPattern("<sym>metNoteQuarterUp</sym> = <sym>metNoteQuarterUp</sym><sym>space</sym><sym>metAugmentationDot</sym>", 3.0/2.0, true),
+            TempoPattern("<sym>metNoteQuarterUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = <sym>metNoteQuarterUp</sym>", 2.0/3.0, true),
+            TempoPattern("<sym>metNoteHalfUp</sym> = <sym>metNoteQuarterUp</sym>", 1.0/2.0, true),
+            TempoPattern("<sym>metNoteQuarterUp</sym> = <sym>metNoteHalfUp</sym>", 2.0/1.0, true),
+            TempoPattern("<sym>metNote8thUp</sym> = <sym>metNote8thUp</sym>", 1.0/1.0, true),
+            TempoPattern("<sym>metNoteQuarterUp</sym> = <sym>metNoteQuarterUp</sym>", 1.0/1.0, true),
             };
-      for (unsigned i = 0; i < sizeof(tp)/sizeof(*tp); ++i) {
+      for (TempoPattern tp : tps) {
+            if (tp.relative && basic)
+                  continue;
             TempoText* tt = new TempoText(gscore);
             tt->setFollowText(true);
-            // leave track at default (-1) to make it possible
-            // for drop() to tell that this came from palette
-            // (it will then be set to 0 there)
-            //tt->setTrack(0);
-            tt->setTempo(tp[i].f);
-            tt->setXmlText(tp[i].pattern);
-            sp->append(tt, tr("Tempo text"), QString(), 1.5);
+            tt->setXmlText(tp.pattern);
+            if (tp.relative) {
+                  tt->setRelative(tp.f);
+                  sp->append(tt, tr("Metric modulation"), QString(), 1.5);
+                  }
+            else {
+                  tt->setTempo(tp.f);
+                  sp->append(tt, tr("Tempo text"), QString(), 1.5);
+                  }
             }
       return sp;
       }
@@ -1135,7 +1165,7 @@ void MuseScore::setAdvancedPalette()
       paletteBox->addPalette(newNoteHeadsPalette());
       paletteBox->addPalette(newTremoloPalette());
       paletteBox->addPalette(newRepeatsPalette());
-      paletteBox->addPalette(newTempoPalette());
+      paletteBox->addPalette(newTempoPalette(false));
       paletteBox->addPalette(newTextPalette());
       paletteBox->addPalette(newBreaksPalette());
       paletteBox->addPalette(newBagpipeEmbellishmentPalette());
@@ -1258,7 +1288,7 @@ void MuseScore::setBasicPalette()
 //      paletteBox->addPalette(newNoteHeadsPalette());
 //      paletteBox->addPalette(newTremoloPalette());
       paletteBox->addPalette(newRepeatsPalette());
-      paletteBox->addPalette(newTempoPalette());
+      paletteBox->addPalette(newTempoPalette(true));
       paletteBox->addPalette(newTextPalette());
       paletteBox->addPalette(newBreaksPalette());
       paletteBox->addPalette(newBeamPalette(true));
@@ -1380,6 +1410,40 @@ void MuseScore::addTempo()
       //tt->setTempo(bps);
       cs->undoAddElement(tt);
       cv->startEdit(tt);
+      }
+
+//---------------------------------------------------------
+//   smuflRanges
+//    read smufl ranges.json file
+//---------------------------------------------------------
+
+QMap<QString, QStringList>* smuflRanges()
+      {
+      static QMap<QString, QStringList> ranges;
+
+      if (ranges.empty()) {
+            QFile fi(":fonts/smufl/ranges.json");
+            if (!fi.open(QIODevice::ReadOnly))
+                  qDebug("ScoreFont: open ranges file <%s> failed", qPrintable(fi.fileName()));
+            QJsonParseError error;
+            QJsonObject o = QJsonDocument::fromJson(fi.readAll(), &error).object();
+            if (error.error != QJsonParseError::NoError)
+                  qDebug("Json parse error in <%s>(offset: %d): %s", qPrintable(fi.fileName()),
+                     error.offset, qPrintable(error.errorString()));
+
+            for (auto s : o.keys()) {
+                  QJsonObject range = o.value(s).toObject();
+                  QString desc      = range.value("description").toString();
+                  QJsonArray glyphs = range.value("glyphs").toArray();
+                  if (glyphs.size() > 0) {
+                        QStringList glyphNames;
+                        for (QJsonValue g : glyphs)
+                              glyphNames.append(g.toString());
+                        ranges.insert(desc, glyphNames);
+                        }
+                  }
+            }
+      return &ranges;
       }
 }
 

@@ -242,7 +242,7 @@ void Dynamic::read(XmlReader& e)
 void Dynamic::layout()
       {
       if (!readPos().isNull()) {
-            if (score()->mscVersion() < 118) {
+            if (score()->mscVersion() <= 114) {
                   setReadPos(QPointF());
                   // hack: 1.2 boundingBoxes are a bit wider which results
                   // in symbols moved right
@@ -265,7 +265,7 @@ void Dynamic::layout()
                   if (c->stem() && !c->up())  // stem down
                         rxpos() += noteHeadWidth * .25;  // center on stem + optical correction
                   else
-                        rxpos() += noteHeadWidth * .5;   // center on note head
+                        rxpos() += noteHeadWidth * .5;   // center on notehead
                   }
             else
                   rxpos() += c->width() * .5;
