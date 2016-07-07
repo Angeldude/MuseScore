@@ -92,17 +92,6 @@ void System::clear()
       // _systemDividers are reused
       }
 
-#if 0
-//---------------------------------------------------------
-//   isVbox
-//---------------------------------------------------------
-
-bool System::isVbox() const
-      {
-      return (ml.size() == 1) && (ml[0]->isVBox() || ml[0]->isTBox());
-      }
-#endif
-
 //---------------------------------------------------------
 //   vbox
 //---------------------------------------------------------
@@ -339,7 +328,6 @@ void System::layout2()
       for (int i = 0; i < _staves.size(); ++i) {
             Staff*    s  = score()->staff(i);
             SysStaff* ss = _staves[i];
-//DEBUG            ss->setShow(true);
             if (s->show() && ss->show()) {
                   visibleStaves.append(std::pair<int,SysStaff*>(i, ss));
                   if (firstStaffIdx == -1)
@@ -368,10 +356,8 @@ void System::layout2()
       qreal akkoladeDistance    = score()->styleP(StyleIdx::akkoladeDistance);
 
       if (visibleStaves.empty()) {
-            printf("====no visible staves, staves %d, score staves %d\n", _staves.size(), score()->nstaves());
+            qDebug("====no visible staves, staves %d, score staves %d", _staves.size(), score()->nstaves());
             }
-
-//      Q_ASSERT(!visibleStaves.empty());
 
       for (auto i = visibleStaves.begin();; ++i) {
             SysStaff* ss  = i->second;
@@ -405,21 +391,8 @@ void System::layout2()
                   if (!mb->isMeasure())
                         continue;
                   Measure* m = toMeasure(mb);
-                  Shape s1, s2;
-                  for (Segment* s = m->first(); s; s = s->next()) {
-                        s1.add(s->staffShape(si1).translated(s->pos()));
-                        s2.add(s->staffShape(si2).translated(s->pos()));
-
-                        for (Element* e : s->annotations()) {
-                              if (e->staffIdx() == si1)
-                                    s1.add(e->bbox().translated(e->pos() + s->pos()));
-                              else if (e->staffIdx() == si2)
-                                    s2.add(e->bbox().translated(e->pos() + s->pos()));
-                              }
-                        }
-
-                  s1.add(QRectF(0.0, staff->height(), 1000.0, 0.0));    // bottom staff line
-                  s2.add(QRectF(0.0, 0.0, 1000.0, 0.0));                // top staff line
+                  Shape& s1 = m->staffShape(si1);
+                  Shape& s2 = m->staffShape(si2);
 
                   qreal d = s1.minVerticalDistance(s2) + minVerticalDistance;
                   dist    = qMax(dist, d);
@@ -1048,7 +1021,6 @@ qreal System::minDistance(System* s2) const
       qreal minVerticalDistance = score()->styleP(StyleIdx::minVerticalDistance);
       qreal dist                = score()->styleP(StyleIdx::minSystemDistance);
       int lastStaff             = _staves.size() - 1;
-      qreal lastStaffY          = _staves[lastStaff]->y();
 
       for (MeasureBase* mb1 : ml) {
             if (mb1->isMeasure()) {
@@ -1070,12 +1042,15 @@ qreal System::minDistance(System* s2) const
             }
 
       for (MeasureBase* mb1 : ml) {
-            qreal bx1 = mb1->x();
-            qreal bx2 = mb1->x() + mb1->width();
+            if (!mb1->isMeasure())
+                  continue;
+            Measure* m1 = toMeasure(mb1);
+            qreal bx1 = m1->x();
+            qreal bx2 = m1->x() + m1->width();
+
             for (MeasureBase* mb2 : s2->measures()) {
-                  if (!(mb1->isMeasure() && mb2->isMeasure()))
+                  if (!mb2->isMeasure())
                         continue;
-                  Measure* m1 = toMeasure(mb1);
                   Measure* m2 = toMeasure(mb2);
                   qreal ax1 = mb2->x();
                   if (ax1 >= bx2)
@@ -1083,24 +1058,44 @@ qreal System::minDistance(System* s2) const
                   qreal ax2 = mb2->x() + mb2->width();
                   if (ax2 < bx1)
                         continue;
-//                  if ((ax1 >= bx1 && ax1 < bx2) || (ax2 >= bx1 && ax2 < bx2) || (ax1 < bx1 && ax2 >= bx2)) {
-                  if ((ax1 >= bx1) || (ax2 < bx2) || (ax1 < bx1 && ax2 >= bx2)) {
-                        Shape s1;
-                        Shape s2;
-                        for (Segment* s = m1->first(); s; s = s->next())
-                              s1.add(s->staffShape(lastStaff).translated(s->pos()));
-                        for (Segment* s = m2->first(); s; s = s->next())
-                              s2.add(s->staffShape(0).translated(s->pos()));
-                        s1.translate(QPointF(m1->x(), lastStaffY));
-                        s2.translate(QPointF(m2->x(), 0.0));
-
-                        s1.add(QRectF(0.0, height(), 1000000.0, 0.0));   // simulated bottom staff line
-                        s2.add(QRectF(0.0, 0.0,      1000000.0, 0.0));   // simulated top staff line
-
-                        qreal d = s1.minVerticalDistance(s2) + minVerticalDistance;
-                        dist = qMax(dist, d - height());
-                        }
+                  Shape s1 = m1->staffShape(lastStaff).translated(m1->pos());
+                  Shape s2 = m2->staffShape(0).translated(m2->pos());
+                  qreal d  = s1.minVerticalDistance(s2) + minVerticalDistance;
+                  dist = qMax(dist, d - m1->mstaff(lastStaff)->lines->height());
                   }
+            }
+      return dist;
+      }
+
+//---------------------------------------------------------
+//   topDistance
+//    return minimum distance to the shape above
+//---------------------------------------------------------
+
+qreal System::topDistance(int staffIdx, const Shape& s) const
+      {
+      qreal dist = -1000000.0;
+      for (MeasureBase* mb1 : ml) {
+            if (!mb1->isMeasure())
+                  continue;
+            Measure* m1 = toMeasure(mb1);
+            dist = qMax(dist, s.minVerticalDistance(m1->staffShape(staffIdx).translated(m1->pos())));
+            }
+      return dist;
+      }
+
+//---------------------------------------------------------
+//   bottomDistance
+//---------------------------------------------------------
+
+qreal System::bottomDistance(int staffIdx, const Shape& s) const
+      {
+      qreal dist = -1000000.0;
+      for (MeasureBase* mb1 : ml) {
+            if (!mb1->isMeasure())
+                  continue;
+            Measure* m1 = toMeasure(mb1);
+            dist = qMax(dist, m1->staffShape(staffIdx).translated(m1->pos()).minVerticalDistance(s));
             }
       return dist;
       }

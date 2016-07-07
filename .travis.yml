@@ -24,7 +24,7 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-4.9
-            - alsa
+            # not white listed - alsa
             - libsndfile1
             - wget
             - make
@@ -54,6 +54,7 @@ matrix:
       script:
         - "./build/travis/job1_Tests/run_tests.sh"
       after_script:
+        - ARTIFACTS_CACHE_CONTROL='public, max-age=315360000'
         - 'ARTIFACTS_PATHS="$(ls vtest/html | tr "\n" ":")" artifacts upload'
 
     # 2nd parallel build job - portable Linux AppImage 64-bit x86 build on CentOS
@@ -100,9 +101,9 @@ matrix:
     - env: "JOB=MacOSX"
       os: osx
       osx_image: xcode7.3
-      cache:
-        directories:
-          - $HOME/qt
+      #cache:
+      #  directories:
+      #    - /usr/local/Cellar
       before_install:
         - openssl aes-256-cbc -K $encrypted_99b076488ab1_key -iv $encrypted_99b076488ab1_iv -in build/travis/resources/osuosl_nighlies_rsa.enc -out build/travis/resources/osuosl_nighlies_rsa -d
         - source build/travis/job_macos/before_install.sh
@@ -111,18 +112,18 @@ matrix:
       script:
         - "./build/travis/job_macos/script.sh"
 
-
 notifications:
-  recipients:
-    - $NOTIFICATION_EMAIL
   email:
+    recipients:
+      - "build@musescore.org"
     on_success: change
     on_failure: always
   irc:
     channels:
-      - $NOTIFICATION_IRC
+      - "chat.freenode.net#musescore"
     on_success: change
     on_failure: change
+    skip_join: true # reduces spam. Channel must not have mode +n set.
   webhooks:
     # trigger Buildtime Trend Service to parse Travis CI log
     - https://buildtimetrend.herokuapp.com/travis

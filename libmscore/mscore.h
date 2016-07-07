@@ -76,7 +76,7 @@ static constexpr qreal DPMM      = DPI / INCH;
 
 static constexpr int MAX_STAVES  = 4;
 
-static const int  SHADOW_NOTE_LIGHT       = 120;
+static const int  SHADOW_NOTE_LIGHT       = 135;
 
 static const char mimeSymbolFormat[]      = "application/musescore/symbol";
 static const char mimeSymbolListFormat[]  = "application/musescore/symbollist";
@@ -340,6 +340,7 @@ const int STAFF_GROUP_MAX = int(StaffGroup::TAB) + 1;      // out of enum to avo
 //    Enumerate the list of build in text styles.
 //    Must be in sync with list in setDefaultStyle().
 //---------------------------------------------------------
+
 MS_QML_ENUM(TextStyleType, signed char,\
       DEFAULT = 0,\
       TITLE,\
@@ -392,16 +393,16 @@ MS_QML_ENUM(TextStyleType, signed char,\
 //   BarLineType
 //---------------------------------------------------------
 
-enum class BarLineType : int {
-      NORMAL           = 1,
-      DOUBLE           = 2,
-      START_REPEAT     = 4,
-      END_REPEAT       = 8,
-      BROKEN           = 0x10,
-      END              = 0x20,
-      END_START_REPEAT = 0x40,
-      DOTTED           = 0x80
-      };
+MS_QML_ENUM(BarLineType, int,\
+      NORMAL           = 1,\
+      DOUBLE           = 2,\
+      START_REPEAT     = 4,\
+      END_REPEAT       = 8,\
+      BROKEN           = 0x10,\
+      END              = 0x20,\
+      END_START_REPEAT = 0x40,\
+      DOTTED           = 0x80\
+      )
 
 constexpr BarLineType operator| (BarLineType t1, BarLineType t2) {
       return static_cast<BarLineType>(static_cast<int>(t1) | static_cast<int>(t2));
@@ -483,15 +484,23 @@ class MScore : public QObject {
       static qreal nudgeStep50;
       static int defaultPlayDuration;
       static QString lastError;
-      static bool layoutDebug;
+
+// #ifndef NDEBUG
+      static bool noHorizontalStretch;
+      static bool noVerticalStretch;
+      static bool showSegmentShapes;
+      static bool showMeasureShapes;
+      static bool showBoundingRect;
+      static bool showCorruptedMeasures;
+// #endif
+      static bool debugMode;
+      static bool testMode;
 
       static int division;
       static int sampleRate;
       static int mtcType;
       static Sequencer* seq;
 
-      static bool debugMode;
-      static bool testMode;
       static bool saveTemplateMode;
       static bool noGui;
 
@@ -534,6 +543,33 @@ inline static int limit(int val, int min, int max)
 
 Q_DECLARE_FLAGS(Align, AlignmentFlags);
 Q_DECLARE_OPERATORS_FOR_FLAGS(Align);
+
+//---------------------------------------------------------
+//   qml access to containers
+//
+//   QmlListAccess provides a convenience interface for
+//   QQmlListProperty providing read-only access to plugins
+//   for std::vector, QVector and QList items
+//---------------------------------------------------------
+
+template <typename T> class QmlListAccess : public QQmlListProperty<T> {
+public:
+      QmlListAccess<T>(QObject* obj, std::vector<T*>& container)
+            : QQmlListProperty<T>(obj, &container, &stdVectorCount, &stdVectorAt) {};
+
+      QmlListAccess<T>(QObject* obj, QVector<T*>& container)
+            : QQmlListProperty<T>(obj, &container, &qVectorCount, &qVectorAt) {};
+
+      QmlListAccess<T>(QObject* obj, QList<T*>& container)
+            : QQmlListProperty<T>(obj, &container, &qListCount, &qListAt) {};
+
+      static int stdVectorCount(QQmlListProperty<T>* l)     { return static_cast<std::vector<T*>*>(l->data)->size(); }
+      static T* stdVectorAt(QQmlListProperty<T>* l, int i)  { return static_cast<std::vector<T*>*>(l->data)->at(i); }
+      static int qVectorCount(QQmlListProperty<T>* l)       { return static_cast<QVector<T*>*>(l->data)->size(); }
+      static T* qVectorAt(QQmlListProperty<T>* l, int i)    { return static_cast<QVector<T*>*>(l->data)->at(i); }
+      static int qListCount(QQmlListProperty<T>* l)         { return static_cast<QList<T*>*>(l->data)->size(); }
+      static T* qListAt(QQmlListProperty<T>* l, int i)      { return static_cast<QList<T*>*>(l->data)->at(i); }
+      };
 
 }     // namespace Ms
 

@@ -78,7 +78,7 @@ PasteState Score::pasteStaff(XmlReader& e, Segment* dst, int dstStaff)
       Q_ASSERT(dst->segmentType() == Segment::Type::ChordRest);
       QList<Chord*> graceNotes;
       int dstTick = dst->tick();
-      bool done = false;
+      bool done   = false;
       bool pasted = false;
       int tickLen = 0, staves = 0;
       while (e.readNextStartElement()) {
@@ -139,6 +139,17 @@ PasteState Score::pasteStaff(XmlReader& e, Segment* dst, int dstStaff)
                               int voiceId = e.attribute("id", "-1").toInt();
                               Q_ASSERT(voiceId >= 0 && voiceId < VOICES);
                               voiceOffset[voiceId] = e.readInt();
+                              }
+                        else if (tag == "move") {
+                              int tick = e.readFraction().ticks();
+                              e.initTick(tick);
+                              int shift = tick - tickStart;
+                              if (makeGap && !makeGap1(dstTick, dstStaffIdx, Fraction::fromTicks(tickLen), voiceOffset)) {
+                                    qDebug("cannot make gap in staff %d at tick %d", dstStaffIdx, dstTick + shift);
+                                    done = true; // break main loop, cannot make gap
+                                    break;
+                                    }
+                              makeGap = false; // create gap only once per staff
                               }
                         else if (tag == "tick") {
                               int tick = e.readInt();
@@ -421,6 +432,14 @@ PasteState Score::pasteStaff(XmlReader& e, Segment* dst, int dstStaff)
             int endStaff = dstStaff + staves;
             if (endStaff > nstaves())
                   endStaff = nstaves();
+            //check and add truly invisible rests insted of gaps
+            //TODO: look if this could be done different
+            Measure* dstM = tick2measureMM(dstTick);
+            Measure* endM = tick2measureMM(dstTick + tickLen);
+            for (int i = dstStaff; i < endStaff; i++) {
+                  for (Measure* m = dstM; m && m != endM->nextMeasureMM(); m = m->nextMeasureMM())
+                        m->checkMeasue(i);
+                  }
             _selection.setRange(s1, s2, dstStaff, endStaff);
             _selection.updateSelectedElements();
 
@@ -857,8 +876,7 @@ PasteState Score::cmdPaste(const QMimeData* ms, MuseScoreView* view)
             else
                   qDebug("cannot read type");
             }
-      else if ((_selection.isRange() || _selection.isList())
-         && ms->hasFormat(mimeStaffListFormat)) {
+      else if ((_selection.isRange() || _selection.isList()) && ms->hasFormat(mimeStaffListFormat)) {
             ChordRest* cr = 0;
             if (_selection.isRange())
                   cr = _selection.firstChordRest();

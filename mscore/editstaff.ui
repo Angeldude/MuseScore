@@ -37,9 +37,6 @@
      <property name="title">
       <string>Part Properties</string>
      </property>
-     <property name="flat">
-      <bool>false</bool>
-     </property>
      <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0,0,0,0,0">
       <item>
        <layout class="QGridLayout" name="grid_PartProps">
@@ -65,9 +62,6 @@
           <property name="text">
            <string>Part name:</string>
           </property>
-          <property name="textFormat">
-           <enum>Qt::PlainText</enum>
-          </property>
           <property name="buddy">
            <cstring>partName</cstring>
           </property>
@@ -77,9 +71,6 @@
          <widget class="QLabel" name="labelInstrName">
           <property name="text">
            <string>Instrument:</string>
-          </property>
-          <property name="textFormat">
-           <enum>Qt::PlainText</enum>
           </property>
           <property name="buddy">
            <cstring>instrumentName</cstring>
@@ -104,9 +95,6 @@
           <property name="text">
            <string>Long instrument name:</string>
           </property>
-          <property name="textFormat">
-           <enum>Qt::PlainText</enum>
-          </property>
           <property name="buddy">
            <cstring>longName</cstring>
           </property>
@@ -122,9 +110,6 @@
           </property>
           <property name="text">
            <string>Short instrument name:</string>
-          </property>
-          <property name="textFormat">
-           <enum>Qt::PlainText</enum>
           </property>
           <property name="buddy">
            <cstring>shortName</cstring>
@@ -158,9 +143,6 @@
         <property name="text">
          <string>Usable pitch range:</string>
         </property>
-        <property name="textFormat">
-         <enum>Qt::PlainText</enum>
-        </property>
        </widget>
       </item>
       <item>
@@ -169,9 +151,6 @@
          <widget class="QLabel" name="label_7">
           <property name="text">
            <string>Amateur:</string>
-          </property>
-          <property name="textFormat">
-           <enum>Qt::PlainText</enum>
           </property>
           <property name="buddy">
            <cstring>minPitchA</cstring>
@@ -188,14 +167,18 @@
         <item>
          <widget class="QToolButton" name="minPitchASelect">
           <property name="text">
-           <string notr="true">...</string>
+           <string notr="true"/>
+          </property>
+          <property name="icon">
+           <iconset resource="musescore.qrc">
+            <normaloff>:/data/icons/edit.svg</normaloff>:/data/icons/edit.svg</iconset>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QLabel" name="label_9">
           <property name="text">
-           <string>-</string>
+           <string notr="true">-</string>
           </property>
          </widget>
         </item>
@@ -209,7 +192,11 @@
         <item>
          <widget class="QToolButton" name="maxPitchASelect">
           <property name="text">
-           <string notr="true">...</string>
+           <string notr="true"/>
+          </property>
+          <property name="icon">
+           <iconset resource="musescore.qrc">
+            <normaloff>:/data/icons/edit.svg</normaloff>:/data/icons/edit.svg</iconset>
           </property>
          </widget>
         </item>
@@ -231,9 +218,6 @@
           <property name="text">
            <string>Professional:</string>
           </property>
-          <property name="textFormat">
-           <enum>Qt::PlainText</enum>
-          </property>
           <property name="buddy">
            <cstring>minPitchP</cstring>
           </property>
@@ -249,14 +233,18 @@
         <item>
          <widget class="QToolButton" name="minPitchPSelect">
           <property name="text">
-           <string notr="true">...</string>
+           <string notr="true"/>
+          </property>
+          <property name="icon">
+           <iconset resource="musescore.qrc">
+            <normaloff>:/data/icons/edit.svg</normaloff>:/data/icons/edit.svg</iconset>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QLabel" name="label_10">
           <property name="text">
-           <string>-</string>
+           <string notr="true">-</string>
           </property>
          </widget>
         </item>
@@ -270,7 +258,11 @@
         <item>
          <widget class="QToolButton" name="maxPitchPSelect">
           <property name="text">
-           <string notr="true">...</string>
+           <string notr="true"/>
+          </property>
+          <property name="icon">
+           <iconset resource="musescore.qrc">
+            <normaloff>:/data/icons/edit.svg</normaloff>:/data/icons/edit.svg</iconset>
           </property>
          </widget>
         </item>
@@ -289,9 +281,6 @@
          <widget class="QLabel" name="labelTransp">
           <property name="text">
            <string>Play transposition:</string>
-          </property>
-          <property name="textFormat">
-           <enum>Qt::PlainText</enum>
           </property>
           <property name="buddy">
            <cstring>iList</cstring>
@@ -443,9 +432,6 @@
           <property name="text">
            <string>+ Octave:</string>
           </property>
-          <property name="textFormat">
-           <enum>Qt::PlainText</enum>
-          </property>
           <property name="buddy">
            <cstring>octave</cstring>
           </property>
@@ -494,9 +480,6 @@
           <widget class="QLabel" name="labelNumOfStrings">
            <property name="text">
             <string>Number of strings:</string>
-           </property>
-           <property name="textFormat">
-            <enum>Qt::PlainText</enum>
            </property>
            <property name="buddy">
             <cstring>numOfStrings</cstring>
@@ -569,9 +552,6 @@
      <property name="title">
       <string>Staff Properties</string>
      </property>
-     <property name="flat">
-      <bool>false</bool>
-     </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <layout class="QGridLayout" name="grid_StaffProps">
@@ -595,12 +575,6 @@
           </item>
           <item row="0" column="1">
            <widget class="QSpinBox" name="lines">
-            <property name="statusTip">
-             <string notr="true">stafflines</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
             <property name="minimum">
              <number>1</number>
             </property>
@@ -617,9 +591,6 @@
             <property name="text">
              <string>Line distance:</string>
             </property>
-            <property name="textFormat">
-             <enum>Qt::PlainText</enum>
-            </property>
             <property name="buddy">
              <cstring>lineDistance</cstring>
             </property>
@@ -632,9 +603,6 @@
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
             </property>
             <property name="suffix">
              <string>sp</string>
@@ -649,9 +617,6 @@
             <property name="text">
              <string>Extra distance above staff:</string>
             </property>
-            <property name="textFormat">
-             <enum>Qt::PlainText</enum>
-            </property>
             <property name="buddy">
              <cstring>spinExtraDistance</cstring>
             </property>
@@ -659,9 +624,6 @@
           </item>
           <item row="3" column="1">
            <widget class="QDoubleSpinBox" name="spinExtraDistance">
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
             <property name="suffix">
              <string>sp</string>
             </property>
@@ -797,12 +759,6 @@
             <property name="text">
              <string>Style group:</string>
             </property>
-            <property name="textFormat">
-             <enum>Qt::PlainText</enum>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
             <property name="buddy">
              <cstring>staffGroupName</cstring>
             </property>
@@ -923,7 +879,9 @@
   <tabstop>numOfStrings</tabstop>
   <tabstop>editStringData</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="musescore.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>buttonBox</sender>

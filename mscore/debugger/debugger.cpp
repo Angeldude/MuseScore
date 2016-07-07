@@ -3,7 +3,7 @@
 //  Linux Music Score Editor
 //  $Id: debugger.cpp 5656 2012-05-21 15:36:47Z wschweer $
 //
-//  Copyright (C) 2002-2011 Werner Schweer and others
+//  Copyright (C) 2002-2016 Werner Schweer and others
 //
 //  This program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License version 2.
@@ -21,7 +21,6 @@
 #include "debugger.h"
 #include "musescore.h"
 #include "icons.h"
-// #include "textstyle.h"
 #include "globals.h"
 #include "libmscore/element.h"
 #include "libmscore/page.h"
@@ -47,7 +46,6 @@
 #include "libmscore/textline.h"
 #include "libmscore/system.h"
 #include "libmscore/arpeggio.h"
-//#include "libmscore/glissando.h"
 #include "libmscore/tremolo.h"
 #include "libmscore/articulation.h"
 #include "libmscore/ottava.h"
@@ -138,7 +136,7 @@ void ElementItem::init()
 //---------------------------------------------------------
 
 Debugger::Debugger(QWidget* parent)
-   : QDialog(parent)
+   : AbstractDialog(parent)
       {
       setupUi(this);
       setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
@@ -1211,10 +1209,10 @@ RestView::RestView()
 
       rb.setupUi(addWidget());
 
-      connect(crb.beamButton, SIGNAL(clicked()), SLOT(beamClicked()));
+      connect(crb.beamButton,   SIGNAL(clicked()), SLOT(beamClicked()));
       connect(crb.tupletButton, SIGNAL(clicked()), SLOT(tupletClicked()));
-      connect(crb.attributes, SIGNAL(itemClicked(QListWidgetItem*)), SLOT(gotoElement(QListWidgetItem*)));
-      connect(crb.lyrics, SIGNAL(itemClicked(QListWidgetItem*)), SLOT(gotoElement(QListWidgetItem*)));
+      connect(crb.attributes,   SIGNAL(itemClicked(QListWidgetItem*)), SLOT(gotoElement(QListWidgetItem*)));
+      connect(crb.lyrics,       SIGNAL(itemClicked(QListWidgetItem*)), SLOT(gotoElement(QListWidgetItem*)));
       }
 
 //---------------------------------------------------------
@@ -1223,7 +1221,7 @@ RestView::RestView()
 
 void RestView::setElement(Element* e)
       {
-      Rest* rest = (Rest*)e;
+      Rest* rest = toRest(e);
       ShowElementBase::setElement(e);
 
       crb.tick->setValue(rest->tick());
@@ -1239,7 +1237,7 @@ void RestView::setElement(Element* e)
       crb.move->setValue(rest->staffMove());
 
       crb.attributes->clear();
-      foreach(Articulation* a, rest->articulations()) {
+      for (Articulation* a : rest->articulations()) {
             QString s;
             s.setNum(qptrdiff(a), 16);
             QListWidgetItem* item = new QListWidgetItem(s);
@@ -1247,7 +1245,7 @@ void RestView::setElement(Element* e)
             crb.attributes->addItem(item);
             }
       crb.lyrics->clear();
-      foreach(Lyrics* lyrics, rest->lyricsList()) {
+      for (Lyrics* lyrics : rest->lyricsList()) {
             QString s;
             s.setNum(qptrdiff(lyrics), 16);
             QListWidgetItem* item = new QListWidgetItem(s);
@@ -1255,22 +1253,10 @@ void RestView::setElement(Element* e)
             crb.lyrics->addItem(item);
             }
 
-      Measure* m = rest->measure();
-      int seg = 0;
-      int tracks = 0; // TODO cs->nstaves() * VOICES;
-      for (Segment* s = m->first(); s; s = s->next(), ++seg) {
-            int track;
-            for (track = 0; track < tracks; ++track) {
-                  Element* e = s->element(track);
-                  if (e == rest)
-                        break;
-                  }
-            if (track < tracks)
-                  break;
-            }
       rb.sym->setValue(int(rest->sym()));
       rb.dotline->setValue(rest->getDotline());
       rb.mmWidth->setValue(rest->mmWidth());
+      rb.gap->setChecked(rest->isGap());
       }
 
 //---------------------------------------------------------
@@ -1785,6 +1771,7 @@ void ShowElementBase::setElement(Element* e)
       eb.offsety->setValue(e->userOff().y());
       eb.readPosX->setValue(e->readPos().x());
       eb.readPosY->setValue(e->readPos().y());
+      eb.autoplace->setChecked(e->autoplace());
       eb.placement->setCurrentIndex(int(e->placement()));
 
       eb.bboxx->setValue(e->bbox().x());

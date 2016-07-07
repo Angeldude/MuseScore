@@ -451,17 +451,6 @@ Page* Articulation::page() const
       }
 
 //---------------------------------------------------------
-//   canvasBoundingRectChanged
-//---------------------------------------------------------
-
-void Articulation::canvasBoundingRectChanged()
-      {
-      Page* p = page();
-      if (p)
-            p->rebuildBspTree();
-      }
-
-//---------------------------------------------------------
 //   subtypeUserName
 //---------------------------------------------------------
 
@@ -501,15 +490,14 @@ void Articulation::setDirection(Direction d)
 void Articulation::reset()
       {
       if (_direction != Direction::AUTO)
-            score()->undoChangeProperty(this, P_ID::DIRECTION, Direction(Direction::AUTO));
+            undoChangeProperty(P_ID::DIRECTION, Direction(Direction::AUTO));
       ArticulationAnchor a = score()->style()->articulationAnchor(int(articulationType()));
       if (_anchor != a)
-            score()->undoChangeProperty(this, P_ID::ARTICULATION_ANCHOR, int(a));
+            undoChangeProperty(P_ID::ARTICULATION_ANCHOR, int(a));
       //MScore::OrnamentStyle o = score()->style()->ornamentStyle(int(ornamentStyle()));
       Element::reset();
-      if (chordRest())
-            chordRest()->layoutArticulations();
-      score()->addRefresh(canvasBoundingRect());
+//      if (chordRest())                              // done in setProperty()
+//            chordRest()->layoutArticulations();
       }
 
 //---------------------------------------------------------
@@ -532,7 +520,7 @@ QVariant Articulation::getProperty(P_ID propertyId) const
             case P_ID::ARTICULATION_ANCHOR: return int(anchor());
             case P_ID::TIME_STRETCH:        return timeStretch();
             case P_ID::ORNAMENT_STYLE:      return int(ornamentStyle());
-            case P_ID::PLAY:   return bool(playArticulation());
+            case P_ID::PLAY:                return bool(playArticulation());
             default:
                   return Element::getProperty(propertyId);
             }
@@ -544,7 +532,6 @@ QVariant Articulation::getProperty(P_ID propertyId) const
 
 bool Articulation::setProperty(P_ID propertyId, const QVariant& v)
       {
-      score()->addRefresh(canvasBoundingRect());
       switch (propertyId) {
             case P_ID::DIRECTION:
                   setDirection(v.value<Direction>());
@@ -563,26 +550,10 @@ bool Articulation::setProperty(P_ID propertyId, const QVariant& v)
                   setTimeStretch(v.toDouble());
                   score()->fixTicks();
                   break;
-            case P_ID::USER_OFF:
-                  setUserOff(v.toPointF());
-                  if (_articulationType == ArticulationType::Tenuto) {
-                        // moving a tenuto may move slurs:
-                        score()->setLayoutAll();
-                        }
-                  return true;
             default:
                   return Element::setProperty(propertyId, v);
             }
-
-      // layout:
-      if (chordRest())
-            chordRest()->layoutArticulations();
-      else if (parent() && parent()->type() == Element::Type::BAR_LINE)
-            static_cast<BarLine*>(parent())->layout();
-
-      score()->addRefresh(canvasBoundingRect());
-      score()->setLayoutAll();       // DEBUG
-      canvasBoundingRectChanged();        // rebuild bsp tree
+      triggerLayout();
       return true;
       }
 

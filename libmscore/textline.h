@@ -30,8 +30,11 @@ class Text;
 class TextLineSegment : public LineSegment {
       Q_OBJECT
 
+      // set in layout():
       Text* _text        { 0 };
       Text* _endText     { 0 };
+      QPointF points[4];
+      int npoints;
 
       void setText(Text*);
 
@@ -46,7 +49,6 @@ class TextLineSegment : public LineSegment {
       virtual void draw(QPainter*) const override;
 
       virtual void layout() override;
-      void layout1();
       virtual void setSelected(bool f);
 
       virtual void spatiumChanged(qreal /*oldValue*/, qreal /*newValue*/) override;
@@ -54,6 +56,7 @@ class TextLineSegment : public LineSegment {
       virtual QVariant getProperty(P_ID id) const override;
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;
       virtual QVariant propertyDefault(P_ID id) const override;
+      virtual Shape shape() const override;
       };
 
 enum class HookType : char { HOOK_90, HOOK_45 };

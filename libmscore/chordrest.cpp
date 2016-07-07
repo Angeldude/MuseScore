@@ -205,8 +205,10 @@ void ChordRest::writeProperties(Xml& xml) const
             xml.tag("durationType", actualDurationType().name());
 
       if (!duration().isZero() && (!actualDurationType().fraction().isValid()
-         || (actualDurationType().fraction() != duration())))
-            xml.fTag("duration", duration());
+         || (actualDurationType().fraction() != duration()))) {
+            xml.tag("duration", duration());
+            //xml.tagE("duration z=\"%d\" n=\"%d\"", duration().numerator(), duration().denominator());
+            }
 
       for (const Articulation* a : _articulations)
             a->write(xml);
@@ -424,19 +426,10 @@ bool ChordRest::readProperties(XmlReader& e)
             }
       else if (tag == "pos") {
             QPointF pt = e.readPoint();
-            if (score()->mscVersion() > 114)
-                  setUserOff(pt * spatium());
+            setUserOff(pt * spatium());
             }
-      else if (tag == "offset") {
-            if (score()->mscVersion() > 114) // || voice() >= 2) {
-                  DurationElement::readProperties(e);
-            else if (type() == Element::Type::REST) {
-                  DurationElement::readProperties(e);
-                  setUserXoffset(0.0); // honor Y offset but not X for rests in older scores
-                  }
-            else
-                  e.skipCurrentElement(); // ignore manual layout otherwise
-            }
+      else if (tag == "offset")
+            DurationElement::readProperties(e);
       else if (DurationElement::readProperties(e))
             return true;
       else
@@ -991,22 +984,22 @@ Element* ChordRest::drop(const DropData& data)
                   {
                   switch(static_cast<Icon*>(e)->iconType()) {
                         case IconType::SBEAM:
-                              score()->undoChangeProperty(this, P_ID::BEAM_MODE, int(Beam::Mode::BEGIN));
+                              undoChangeProperty(P_ID::BEAM_MODE, int(Beam::Mode::BEGIN));
                               break;
                         case IconType::MBEAM:
-                              score()->undoChangeProperty(this, P_ID::BEAM_MODE, int(Beam::Mode::MID));
+                              undoChangeProperty(P_ID::BEAM_MODE, int(Beam::Mode::MID));
                               break;
                         case IconType::NBEAM:
-                              score()->undoChangeProperty(this, P_ID::BEAM_MODE, int(Beam::Mode::NONE));
+                              undoChangeProperty(P_ID::BEAM_MODE, int(Beam::Mode::NONE));
                               break;
                         case IconType::BEAM32:
-                              score()->undoChangeProperty(this, P_ID::BEAM_MODE, int(Beam::Mode::BEGIN32));
+                              undoChangeProperty(P_ID::BEAM_MODE, int(Beam::Mode::BEGIN32));
                               break;
                         case IconType::BEAM64:
-                              score()->undoChangeProperty(this, P_ID::BEAM_MODE, int(Beam::Mode::BEGIN64));
+                              undoChangeProperty(P_ID::BEAM_MODE, int(Beam::Mode::BEGIN64));
                               break;
                         case IconType::AUTOBEAM:
-                              score()->undoChangeProperty(this, P_ID::BEAM_MODE, int(Beam::Mode::AUTO));
+                              undoChangeProperty(P_ID::BEAM_MODE, int(Beam::Mode::AUTO));
                               break;
                         default:
                               break;
@@ -1121,6 +1114,9 @@ QString ChordRest::durationUserName() const
                   break;
             case 3:
                   dotString += tr("Triple dotted %1").arg(durationType().durationTypeUserName()).trimmed();
+                  break;
+            case 4:
+                  dotString += tr("Quadruple dotted %1").arg(durationType().durationTypeUserName()).trimmed();
                   break;
             default:
                   dotString += durationType().durationTypeUserName();
@@ -1247,9 +1243,15 @@ QVariant ChordRest::getProperty(P_ID propertyId) const
 bool ChordRest::setProperty(P_ID propertyId, const QVariant& v)
       {
       switch (propertyId) {
-            case P_ID::SMALL:      setSmall(v.toBool()); break;
-            case P_ID::BEAM_MODE:  setBeamMode(Beam::Mode(v.toInt())); break;
-            case P_ID::STAFF_MOVE: setStaffMove(v.toInt()); break;
+            case P_ID::SMALL:
+                  setSmall(v.toBool());
+                  break;
+            case P_ID::BEAM_MODE:
+                  setBeamMode(Beam::Mode(v.toInt()));
+                  break;
+            case P_ID::STAFF_MOVE:
+                  setStaffMove(v.toInt());
+                  break;
             case P_ID::VISIBLE:
                   setVisible(v.toBool());
                   measure()->checkMultiVoices(staffIdx());
@@ -1260,7 +1262,7 @@ bool ChordRest::setProperty(P_ID propertyId, const QVariant& v)
             default:
                   return DurationElement::setProperty(propertyId, v);
             }
-      score()->setLayoutAll();
+      triggerLayout();
       return true;
       }
 
@@ -1271,12 +1273,16 @@ bool ChordRest::setProperty(P_ID propertyId, const QVariant& v)
 QVariant ChordRest::propertyDefault(P_ID propertyId) const
       {
       switch (propertyId) {
-            case P_ID::SMALL:      return false;
-            case P_ID::BEAM_MODE:  return int(Beam::Mode::AUTO);
-            case P_ID::STAFF_MOVE: return 0;
-            default:          return DurationElement::propertyDefault(propertyId);
+            case P_ID::SMALL:
+                  return false;
+            case P_ID::BEAM_MODE:
+                  return int(Beam::Mode::AUTO);
+            case P_ID::STAFF_MOVE:
+                  return 0;
+            default:
+                  return DurationElement::propertyDefault(propertyId);
             }
-      score()->setLayoutAll();
+      triggerLayout();
       }
 
 //---------------------------------------------------------
@@ -1285,7 +1291,7 @@ QVariant ChordRest::propertyDefault(P_ID propertyId) const
 
 bool ChordRest::isGrace() const
       {
-      return type() == Element::Type::CHORD && ((Chord*)this)->noteType() != NoteType::NORMAL;
+      return isChord() && toChord(this)->noteType() != NoteType::NORMAL;
       }
 
 //---------------------------------------------------------
@@ -1294,11 +1300,10 @@ bool ChordRest::isGrace() const
 
 bool ChordRest::isGraceBefore() const
       {
-      return (type() == Element::Type::CHORD && (((Chord*)this)->noteType() == NoteType::ACCIACCATURA
-                                          || ((Chord*)this)->noteType() == NoteType::APPOGGIATURA
-                                          || ((Chord*)this)->noteType() == NoteType::GRACE4
-                                          || ((Chord*)this)->noteType() == NoteType::GRACE16
-                                          || ((Chord*)this)->noteType() == NoteType::GRACE32));
+      return isChord()
+         && (toChord(this)->noteType() & (
+           NoteType::ACCIACCATURA | NoteType::APPOGGIATURA | NoteType::GRACE4 | NoteType::GRACE16 | NoteType::GRACE32
+           ));
       }
 
 //---------------------------------------------------------
@@ -1307,9 +1312,8 @@ bool ChordRest::isGraceBefore() const
 
 bool ChordRest::isGraceAfter() const
       {
-      return (type() == Element::Type::CHORD && (((Chord*)this)->noteType() == NoteType::GRACE8_AFTER
-                                          || ((Chord*)this)->noteType() == NoteType::GRACE16_AFTER
-                                          || ((Chord*)this)->noteType() == NoteType::GRACE32_AFTER));
+      return isChord()
+         && (toChord(this)->noteType() & (NoteType::GRACE8_AFTER | NoteType::GRACE16_AFTER | NoteType::GRACE32_AFTER));
       }
 
 //---------------------------------------------------------

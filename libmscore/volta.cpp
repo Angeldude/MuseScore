@@ -25,7 +25,7 @@ namespace Ms {
 void VoltaSegment::layout()
       {
       rypos() = 0.0;
-      TextLineSegment::layout1();
+      TextLineSegment::layout();
       if (parent())     // for palette
             rypos() += score()->styleP(StyleIdx::voltaY) * mag();
       adjustReadPos();
@@ -302,7 +302,6 @@ QVariant Volta::getProperty(P_ID propertyId) const
 
 bool Volta::setProperty(P_ID propertyId, const QVariant& val)
       {
-      score()->addRefresh(pageBoundingRect());
       switch (propertyId) {
             case P_ID::VOLTA_TYPE:
                   setVoltaType(Type(val.toInt()));
@@ -323,9 +322,7 @@ bool Volta::setProperty(P_ID propertyId, const QVariant& val)
                         return false;
                   break;
             }
-      // layout();
-      // score()->addRefresh(pageBoundingRect());
-      score()->setLayoutAll();
+      triggerLayout();
       return true;
       }
 
@@ -335,7 +332,7 @@ bool Volta::setProperty(P_ID propertyId, const QVariant& val)
 
 QVariant Volta::propertyDefault(P_ID propertyId) const
       {
-      switch(propertyId) {
+      switch (propertyId) {
             case P_ID::LINE_STYLE:
                   return score()->styleI(StyleIdx::voltaLineStyle);
 
@@ -444,7 +441,7 @@ void Volta::styleChanged()
 void Volta::reset()
       {
       if (lineWidthStyle == PropertyStyle::UNSTYLED)
-            score()->undoChangeProperty(this, P_ID::LINE_WIDTH, propertyDefault(P_ID::LINE_WIDTH), PropertyStyle::STYLED);
+            undoChangeProperty(P_ID::LINE_WIDTH, propertyDefault(P_ID::LINE_WIDTH), PropertyStyle::STYLED);
       TextLine::reset();
       }
 

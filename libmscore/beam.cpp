@@ -205,14 +205,25 @@ void Beam::draw(QPainter* painter) const
       {
       painter->setBrush(QBrush(curColor()));
       painter->setPen(Qt::NoPen);
-      qreal lw2 = score()->styleP(StyleIdx::beamWidth) * .5 * mag();
+      qreal lw2 = score()->styleP(StyleIdx::beamWidth) * .5 * staff()->mag();
+      bool limit = beamSegments.size() > 1;
       for (const QLineF* bs : beamSegments) {
-            QPolygonF pg;
-               pg << QPointF(bs->x1(), bs->y1()-lw2)
-                  << QPointF(bs->x2(), bs->y2()-lw2)
-                  << QPointF(bs->x2(), bs->y2()+lw2)
-                  << QPointF(bs->x1(), bs->y1()+lw2);
-            painter->drawPolygon(pg, Qt::OddEvenFill);
+            // make beam thickness independent of slant
+            // (expression can be simplified?)
+            double d  = (qAbs(bs->y2() - bs->y1())) / (bs->x2() - bs->x1());
+            if (limit && d > M_PI/6.0)
+                  d = M_PI/6.0;
+            double w  = atan(d);
+            double ww = lw2 / sin(M_PI_2 - w);
+
+            painter->drawPolygon(
+               QPolygonF({
+                  QPointF(bs->x1(), bs->y1() - ww),
+                  QPointF(bs->x2(), bs->y2() - ww),
+                  QPointF(bs->x2(), bs->y2() + ww),
+                  QPointF(bs->x1(), bs->y1() + ww),
+                  }),
+               Qt::OddEvenFill);
             }
       }
 
@@ -334,7 +345,7 @@ void Beam::layout1()
             int staffIdx = -1;
             for (ChordRest* cr : _elements) {
                   qreal m = cr->small() ? score()->styleD(StyleIdx::smallNoteMag) : 1.0;
-                  mag = qMax(mag, m);
+                  mag     = qMax(mag, m);
                   if (cr->isChord()) {
                         c2 = toChord(cr);
                         staffIdx = c2->vStaffIdx();
@@ -364,6 +375,8 @@ void Beam::layout1()
                   }
             else {
                   if (maxMove > 0)            // cross staff beaming down
+                        _up = true;
+                  else if (minMove < 0)
                         _up = false;
                   else if (c1) {
                         Measure* m = c1->measure();
@@ -2177,19 +2190,19 @@ void Beam::setBeamDirection(Direction d)
 void Beam::reset()
       {
       if (distribute())
-            score()->undoChangeProperty(this, P_ID::DISTRIBUTE, false);
+            undoChangeProperty(P_ID::DISTRIBUTE, false);
       if (growLeft() != 1.0)
-            score()->undoChangeProperty(this, P_ID::GROW_LEFT, 1.0);
+            undoChangeProperty(P_ID::GROW_LEFT, 1.0);
       if (growRight() != 1.0)
-            score()->undoChangeProperty(this, P_ID::GROW_RIGHT, 1.0);
+            undoChangeProperty(P_ID::GROW_RIGHT, 1.0);
       if (userModified()) {
-            score()->undoChangeProperty(this, P_ID::BEAM_POS, QVariant(beamPos()));
-            score()->undoChangeProperty(this, P_ID::USER_MODIFIED, false);
+            undoChangeProperty(P_ID::BEAM_POS, QVariant(beamPos()));
+            undoChangeProperty(P_ID::USER_MODIFIED, false);
             }
       if (beamDirection() != Direction::AUTO)
-            score()->undoChangeProperty(this, P_ID::STEM_DIRECTION, Direction(Direction::AUTO));
+            undoChangeProperty(P_ID::STEM_DIRECTION, Direction(Direction::AUTO));
       if (noSlopeStyle == PropertyStyle::UNSTYLED)
-            score()->undoChangeProperty(this, P_ID::BEAM_NO_SLOPE, propertyDefault(P_ID::BEAM_NO_SLOPE), PropertyStyle::STYLED);
+            undoChangeProperty(P_ID::BEAM_NO_SLOPE, propertyDefault(P_ID::BEAM_NO_SLOPE), PropertyStyle::STYLED);
 
       setGenerated(true);
       }
@@ -2227,8 +2240,19 @@ void Beam::endEdit()
       {
       Element::endEdit();
       editFragment = -1;
-      // we need a full relayout to trigger stems to be redrawn
-      score()->setLayoutAll();
+      triggerLayout();
+      }
+
+//---------------------------------------------------------
+//   triggerLayout
+//---------------------------------------------------------
+
+void Beam::triggerLayout() const
+      {
+      if (!_elements.empty()) {
+            _elements.front()->triggerLayout();
+            _elements.back()->triggerLayout();
+            }
       }
 
 //---------------------------------------------------------
@@ -2265,9 +2289,9 @@ Element* Beam::drop(const DropData& data)
       else
             return 0;
       if (g1 != growLeft())
-            score()->undoChangeProperty(this, P_ID::GROW_LEFT, g1);
+            undoChangeProperty(P_ID::GROW_LEFT, g1);
       if (g2 != growRight())
-            score()->undoChangeProperty(this, P_ID::GROW_RIGHT, g2);
+            undoChangeProperty(P_ID::GROW_RIGHT, g2);
       return 0;
       }
 
@@ -2446,5 +2470,15 @@ void Beam::styleChanged()
             setNoSlope(score()->styleB(StyleIdx::beamNoSlope));
       }
 
+//---------------------------------------------------------
+//   shape
+//---------------------------------------------------------
+
+Shape Beam::shape() const
+      {
+      Shape shape;
+      shape.add(bbox());
+      return shape;
+      }
 }
 

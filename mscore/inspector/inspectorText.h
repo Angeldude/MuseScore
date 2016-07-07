@@ -23,10 +23,9 @@ namespace Ms {
 //   InspectorText
 //---------------------------------------------------------
 
-class InspectorText : public InspectorBase {
+class InspectorText : public InspectorElementBase {
       Q_OBJECT
 
-      UiInspectorElement e;
       Ui::InspectorText t;
 
    public:

@@ -294,9 +294,7 @@ void UndoStack::pop()
 
 void UndoStack::setClean()
       {
-      if (cleanIdx != curIdx) {
-            cleanIdx = curIdx;
-            }
+      cleanIdx = curIdx;
       }
 
 //---------------------------------------------------------
@@ -320,9 +318,8 @@ void UndoStack::undo()
 void UndoStack::redo()
       {
       qCDebug(undoRedo) << "===";
-      if (canRedo()) {
+      if (canRedo())
             list[curIdx++]->redo();
-            }
       }
 
 //---------------------------------------------------------
@@ -1623,28 +1620,6 @@ const char* RemoveElement::name() const
       }
 
 //---------------------------------------------------------
-//   ChangeConcertPitch
-//---------------------------------------------------------
-
-ChangeConcertPitch::ChangeConcertPitch(Score* s, bool v)
-      {
-      score = s;
-      val   = v;
-      }
-
-//---------------------------------------------------------
-//   flip
-//---------------------------------------------------------
-
-void ChangeConcertPitch::flip()
-      {
-      int oval = int(score->styleB(StyleIdx::concertPitch));
-      score->style()->set(StyleIdx::concertPitch, val);
-      score->setLayoutAll();
-      val = oval;
-      }
-
-//---------------------------------------------------------
 //   InsertPart
 //---------------------------------------------------------
 
@@ -1808,9 +1783,8 @@ void ChangePitch::flip()
       int f_tpc1  = note->tpc1();
       int f_tpc2  = note->tpc2();
       // do not change unless necessary
-      if (f_pitch == pitch && f_tpc1 == tpc1 && f_tpc2 == tpc2) {
+      if (f_pitch == pitch && f_tpc1 == tpc1 && f_tpc2 == tpc2)
             return;
-            }
 
       note->setPitch(pitch, tpc1, tpc2);
       pitch = f_pitch;
@@ -1859,7 +1833,7 @@ void ChangeFretting::flip()
       fret  = f_fret;
       tpc1  = f_tpc1;
       tpc2  = f_tpc2;
-      note->score()->setLayoutAll();
+      note->score()->setLayout(note->tick());
       }
 
 //---------------------------------------------------------
@@ -1913,7 +1887,9 @@ void ChangeElement::flip()
                   ns->system()->add(ns);
             }
       qSwap(oldElement, newElement);
-      score->setLayoutAll();
+      oldElement->triggerLayout();
+      newElement->triggerLayout();
+      // score->setLayoutAll();
       }
 
 //---------------------------------------------------------
@@ -1978,7 +1954,7 @@ void ChangeKeySig::flip()
 
       showCourtesy = sc;
       ks           = oe;
-      keysig->score()->setLayoutAll();
+      keysig->score()->setLayoutAll();  //TODO: reduce update to range covered by keysig
       }
 
 //---------------------------------------------------------
@@ -2207,7 +2183,7 @@ void EditText::undoRedo()
       QString s = text->xmlText();
       text->setXmlText(oldText);
       oldText = s;
-      text->score()->setLayoutAll();
+      text->triggerLayout();
       }
 
 //---------------------------------------------------------
@@ -2547,18 +2523,11 @@ ChangeChordStaffMove::ChangeChordStaffMove(ChordRest* cr, int v)
 
 void ChangeChordStaffMove::flip()
       {
-      const LinkedElements* l = chordRest->links();
       int v = chordRest->staffMove();
-      if (l) {
-            for (ScoreElement* e : *l) {
-                  ChordRest* cr = static_cast<ChordRest*>(e);
-                  cr->setStaffMove(staffMove);
-                  cr->score()->setLayoutAll();
-                  }
-            }
-      else {
-            chordRest->setStaffMove(staffMove);
-            chordRest->score()->setLayoutAll();
+      for (ScoreElement* e : chordRest->linkList()) {
+            ChordRest* cr = static_cast<ChordRest*>(e);
+            cr->setStaffMove(staffMove);
+            cr->triggerLayout();
             }
       staffMove = v;
       }
@@ -3026,7 +2995,8 @@ void SwapCR::flip()
       Element* cr = s1->element(track);
       s1->setElement(track, s2->element(track));
       s2->setElement(track, cr);
-      cr1->score()->setLayoutAll();
+      cr1->score()->setLayout(s1->tick());
+      cr1->score()->setLayout(s2->tick());
       }
 
 //---------------------------------------------------------
@@ -3055,7 +3025,7 @@ void ChangeClefType::flip()
       clef->staff()->setClef(clef);
       Segment* segment = clef->segment();
       updateNoteLines(segment, clef->track());
-      clef->score()->setLayoutAll();
+      clef->score()->setLayoutAll();      // TODO: reduce layout to clef range
 
       concertClef     = ocl;
       transposingClef = otc;
@@ -3096,9 +3066,8 @@ void ChangeStaffUserDist::flip()
 
 void ChangeProperty::flip()
       {
-// #ifndef QT_NO_DEBUG
       qCDebug(undoRedo) << "ChangeProperty::flip():" << element->name() << propertyName(id) << element->getProperty(id) << "->" << property;
-// #endif
+
       if (id == P_ID::SPANNER_TICK || id == P_ID::SPANNER_TICKS)
             static_cast<Element*>(element)->score()->removeSpanner(static_cast<Spanner*>(element));
 
@@ -3203,7 +3172,6 @@ void AddBracket::undo()
       staff->score()->setLayoutAll();
       }
 
-
 void RemoveBracket::redo()
       {
       staff->setBracket(level, BracketType::NO_BRACKET);
@@ -3294,7 +3262,8 @@ void ChangeSpannerElements::flip()
             static_cast<Note*>(startElement)->setTieFor(0);
             tie->startNote()->setTieFor(tie);
             }
-      spanner->score()->setLayoutAll();
+      spanner->score()->setLayout(spanner->tick());
+      spanner->score()->setLayout(spanner->tick2());
       }
 
 //---------------------------------------------------------
@@ -3485,6 +3454,16 @@ void Score::undoChangeBarLine(Measure* measure, BarLineType barType)
                         break;
                   }
             }
+      }
+
+//---------------------------------------------------------
+//   undoChangeGap
+//---------------------------------------------------------
+
+void ChangeGap::flip()
+      {
+      rest->setGap(v);
+      v = !v;
       }
 
 }

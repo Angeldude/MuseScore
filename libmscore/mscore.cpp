@@ -56,11 +56,22 @@
 #include "fraction.h"
 #include "excerpt.h"
 #include "spatium.h"
+#include "barline.h"
 
 namespace Ms {
 
-bool  MScore::debugMode;
-bool  MScore::testMode = false;
+bool MScore::debugMode;
+bool MScore::testMode = false;
+
+// #ifndef NDEBUG
+bool MScore::showSegmentShapes   = false;
+bool MScore::showMeasureShapes   = false;
+bool MScore::noHorizontalStretch = false;
+bool MScore::noVerticalStretch   = false;
+bool MScore::showBoundingRect    = false;
+bool MScore::showCorruptedMeasures = true;
+// #endif
+
 bool  MScore::saveTemplateMode = false;
 bool  MScore::noGui = false;
 
@@ -91,7 +102,6 @@ qreal   MScore::nudgeStep50;
 int     MScore::defaultPlayDuration;
 // QString MScore::partStyle;
 QString MScore::lastError;
-bool    MScore::layoutDebug = false;
 int     MScore::division    = 480; // 3840;   // pulses per quarter note (PPQ) // ticks per beat
 int     MScore::sampleRate  = 44100;
 int     MScore::mtcType;
@@ -196,7 +206,9 @@ void MScore::init()
 
       //classed enumerations
       qRegisterMetaType<MSQE_TextStyleType::E>("TextStyleType");
+      qRegisterMetaType<MSQE_BarLineType::E>("BarLineType");
 #endif
+      qRegisterMetaType<Fraction>("Fraction");
 
 //      DPMM = DPI / INCH;       // dots/mm
 
@@ -406,6 +418,8 @@ QQmlEngine* MScore::qml()
             qmlRegisterType<StemSlash>  ("MuseScore", 1, 0, "StemSlash");
             qmlRegisterType<Beam>       ("MuseScore", 1, 0, "Beam");
             qmlRegisterType<Excerpt>    ("MuseScore", 1, 0, "Excerpt");
+            qmlRegisterType<BarLine>    ("MuseScore", 1, 0, "BarLine");
+
             qmlRegisterType<FractionWrapper>   ("MuseScore", 1, 1, "Fraction");
             qRegisterMetaType<FractionWrapper*>("FractionWrapper*");
 
@@ -414,6 +428,7 @@ QQmlEngine* MScore::qml()
 
             //classed enumerations
             qmlRegisterUncreatableType<MSQE_TextStyleType>("MuseScore", 1, 0, "TextStyleType", tr("You can't create an enum"));
+            qmlRegisterUncreatableType<MSQE_BarLineType>("MuseScore", 1, 0, "BarLineType", tr("You can't create an enum"));
 
             //-----------virtual classes
             qmlRegisterType<ChordRest>();

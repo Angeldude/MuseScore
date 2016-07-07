@@ -60,6 +60,8 @@ namespace Ms {
 
 Note* Chord::upNote() const
       {
+      Q_ASSERT(!_notes.empty());
+
       Note* result = _notes.back();
       if (!staff())
             return result;
@@ -89,6 +91,8 @@ Note* Chord::upNote() const
 
 Note* Chord::downNote() const
       {
+      Q_ASSERT(!_notes.empty());
+
       Note* result = _notes.front();
       if (!staff())
             return result;
@@ -789,6 +793,7 @@ void Chord::addLedgerLines()
 
 void Chord::computeUp()
       {
+      Q_ASSERT(!_notes.empty());
       StaffType* tab = 0;
       // TAB STAVES
       if (staff() && staff()->isTabStaff()) {
@@ -1621,8 +1626,10 @@ void Chord::cmdUpdateNotes(AccidentalState* as)
 
       if (staffGroup == StaffGroup::STANDARD) {
             for (Note* note : lnotes) {
-                  if (note->tieBack()) {
-                        if (note->accidental() && note->tpc() == note->tieBack()->startNote()->tpc()) {
+                  if (note->tieBack() && note->tpc() == note->tieBack()->startNote()->tpc()) {
+                        // same pitch
+                        if (note->accidental() && note->accidental()->role() == AccidentalRole::AUTO) {
+                              // not courtesy
                               // TODO: remove accidental only if note is not
                               // on new system
                               score()->undoRemoveElement(note->accidental());
@@ -2627,19 +2634,17 @@ bool Chord::setProperty(P_ID propertyId, const QVariant& v)
       switch (propertyId) {
             case P_ID::NO_STEM:
                   setNoStem(v.toBool());
-                  score()->setLayoutAll();
                   break;
             case P_ID::SMALL:
                   setSmall(v.toBool());
-                  score()->setLayoutAll();
                   break;
             case P_ID::STEM_DIRECTION:
                   setStemDirection(v.value<Direction>());
-                  score()->setLayoutAll();
                   break;
             default:
                   return ChordRest::setProperty(propertyId, v);
             }
+      triggerLayout();
       return true;
       }
 
@@ -2897,8 +2902,8 @@ QPointF Chord::layoutArticulation(Articulation* a)
 
 void Chord::reset()
       {
-      score()->undoChangeProperty(this, P_ID::STEM_DIRECTION, Direction(Direction::AUTO));
-      score()->undoChangeProperty(this, P_ID::BEAM_MODE, int(Beam::Mode::AUTO));
+      undoChangeProperty(P_ID::STEM_DIRECTION, Direction(Direction::AUTO));
+      undoChangeProperty(P_ID::BEAM_MODE, int(Beam::Mode::AUTO));
       score()->createPlayEvents(this);
       ChordRest::reset();
       }
@@ -2964,7 +2969,7 @@ void Chord::setSlash(bool flag, bool stemless)
             qreal y = 0.0;
             if (track() % 2) {
                   line = staff()->bottomLine() + 1;
-                  y = 0.5 * spatium();
+                  y    = 0.5 * spatium();
                   }
             else {
                   line = -1;
@@ -3216,7 +3221,8 @@ QString Chord::accessibleExtraInfo() const
             rez = QString("%1 %2").arg(rez).arg(tremolo()->screenReaderInfo());
 
       foreach (Element* e, el()) {
-            if (!score()->selectionFilter().canSelect(e)) continue;
+            if (!score()->selectionFilter().canSelect(e))
+                  continue;
             rez = QString("%1 %2").arg(rez).arg(e->screenReaderInfo());
             }
 
@@ -3231,7 +3237,7 @@ Shape Chord::shape() const
       {
       Shape shape;
       processSiblings([&shape, this] (Element* e) {
-//            if (!(e->isStem() && beam()))
+            if (!e->isLedgerLine())             // dont add ledger lines to shape
                   shape.add(e->shape());
             });
       shape.add(ChordRest::shape());      // add articulation + lyrics

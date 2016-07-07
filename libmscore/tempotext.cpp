@@ -240,7 +240,7 @@ void TempoText::setTempo(qreal v)
 
 void TempoText::undoSetTempo(qreal v)
       {
-      score()->undoChangeProperty(this, P_ID::TEMPO, v);
+      undoChangeProperty(P_ID::TEMPO, v);
       }
 
 //---------------------------------------------------------
@@ -249,7 +249,7 @@ void TempoText::undoSetTempo(qreal v)
 
 void TempoText::undoSetFollowText(bool v)
       {
-      score()->undoChangeProperty(this, P_ID::TEMPO_FOLLOW_TEXT, v);
+      undoChangeProperty(P_ID::TEMPO_FOLLOW_TEXT, v);
       }
 
 //---------------------------------------------------------
@@ -272,7 +272,7 @@ QVariant TempoText::getProperty(P_ID propertyId) const
 
 bool TempoText::setProperty(P_ID propertyId, const QVariant& v)
       {
-      switch(propertyId) {
+      switch (propertyId) {
             case P_ID::TEMPO:
                   setTempo(v.toDouble());
                   score()->setTempo(segment(), _tempo);
@@ -286,7 +286,7 @@ bool TempoText::setProperty(P_ID propertyId, const QVariant& v)
                         return false;
                   break;
             }
-      score()->setLayoutAll();
+      triggerLayout();
       return true;
       }
 
@@ -342,6 +342,8 @@ QString TempoText::duration2userName(const TDuration t)
             case 2: dots = tr("Double dotted %1").arg(t.durationTypeUserName());
                   break;
             case 3: dots = tr("Triple dotted %1").arg(t.durationTypeUserName());
+                  break;
+            case 4: dots = tr("Quadruple dotted %1").arg(t.durationTypeUserName());
                   break;
             default:
                   dots = t.durationTypeUserName();

@@ -144,7 +144,7 @@ QVariant SpannerSegment::propertyDefault(P_ID id) const
 
 void SpannerSegment::reset()
       {
-      score()->undoChangeProperty(this, P_ID::USER_OFF2, QPointF());
+      undoChangeProperty(P_ID::USER_OFF2, QPointF());
       Element::reset();
       spanner()->reset();
       }
@@ -224,6 +224,15 @@ QString SpannerSegment::accessibleInfo() const
 void SpannerSegment::styleChanged()
       {
       _spanner->styleChanged();
+      }
+
+//---------------------------------------------------------
+//   triggerLayout
+//---------------------------------------------------------
+
+void SpannerSegment::triggerLayout() const
+      {
+      _spanner->triggerLayout();
       }
 
 //---------------------------------------------------------
@@ -889,6 +898,25 @@ void Spanner::setTicks(int v)
       _ticks = v;
       if (score())
             score()->spannerMap().setDirty();
+      }
+
+//---------------------------------------------------------
+//   triggerLayout
+//---------------------------------------------------------
+
+void Spanner::triggerLayout() const
+      {
+      score()->setLayout(_tick);
+      score()->setLayout(_tick + _ticks);
+      }
+
+//---------------------------------------------------------
+//   layoutSystem
+//---------------------------------------------------------
+
+void Spanner::layoutSystem(System*)
+      {
+      qDebug(" %s", name());
       }
 
 }

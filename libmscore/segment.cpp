@@ -649,7 +649,6 @@ void Segment::remove(Element* el)
             case Element::Type::BREATH:
                   _elist[track] = 0;
                   score()->setPause(tick(), 0);
-                  score()->setLayoutAll();
                   break;
 
             default:
@@ -1276,18 +1275,6 @@ QString Segment::accessibleExtraInfo() const
       return rez + " " + startSpanners + " " + endSpanners;
       }
 
-//--------------------------------------------------------
-//   qmlAnnotations
-//--------------------------------------------------------
-
-QQmlListProperty<Ms::Element> Segment::qmlAnnotations()
-      {
-      QList<Element*> qmlAnnotations;
-      for (Element* e : _annotations)
-            qmlAnnotations.append(e);
-      return QQmlListProperty<Ms::Element>(this, qmlAnnotations);
-      }
-
 //---------------------------------------------------------
 //   createShapes
 //---------------------------------------------------------
@@ -1335,7 +1322,12 @@ void Segment::createShape(int staffIdx)
             }
       for (Element* e : _annotations) {
             // probably only allow for lyrics and chordnames
-            if (e->staffIdx() == staffIdx && e->visible() && !e->isTempoText() && !e->isStaffText())
+            if (e->staffIdx() == staffIdx
+               && e->visible()
+               && !e->isRehearsalMark()
+               && !e->isTempoText()
+               && !e->isDynamic()
+               && !e->isStaffText())
                   s.add(e->shape());
             }
       }
@@ -1404,8 +1396,22 @@ qreal Segment::minHorizontalDistance(Segment* ns, bool systemHeaderGap) const
                   w += score()->styleP(StyleIdx::noteBarDistance);
             else if (nst == Segment::Type::Clef)
                   w = qMax(w, score()->styleP(StyleIdx::clefLeftMargin));
-            else
+            else {
+                  bool isGap = false;
+                  for (int i = 0; i < score()->nstaves() * VOICES; i++) {
+                        Element* el = element(i);
+                        if (el && el->isRest() && toRest(el)->isGap())
+                              isGap = true;
+                        else if (el) {
+                              isGap = false;
+                              break;
+                              }
+                        }
+                  if (isGap)
+                        return 0.0;
+
                   w = qMax(w, score()->noteHeadWidth()) + score()->styleP(StyleIdx::minNoteDistance);
+                  }
             }
       else if (st != Segment::Type::ChordRest && nst == Segment::Type::ChordRest) {
             qreal d;

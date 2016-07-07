@@ -52,11 +52,14 @@ struct MStaff {
       StaffLines*  lines   { 0 };
       Spacer* _vspacerUp   { 0 };
       Spacer* _vspacerDown { 0 };
+      Shape _shape;
       bool hasVoices       { false };     ///< indicates that MStaff contains more than one voice,
                                           ///< this changes some layout rules
       bool _visible        { true };
       bool _slashStyle     { false };
-
+#ifndef NDEBUG
+      bool _corrupted      { false };
+#endif
       MStaff()  {}
       ~MStaff();
       MStaff(const MStaff&);
@@ -71,6 +74,9 @@ struct MStaff {
 
       Text* noText() const         { return _noText;     }
       void setNoText(Text* t)      { _noText = t;        }
+
+      Shape& shape()               { return _shape; }
+      const Shape& shape() const   { return _shape; }
       };
 
 //---------------------------------------------------------
@@ -138,6 +144,7 @@ class Measure : public MeasureBase {
       void writeBox(Xml&) const;
       void readBox(XmlReader&);
       virtual bool isEditable() const override { return false; }
+      void checkMeasue(int idx);
 
       virtual void add(Element*) override;
       virtual void remove(Element*) override;
@@ -148,6 +155,7 @@ class Measure : public MeasureBase {
       std::vector<MStaff*>& mstaves()       { return _mstaves;      }
       const std::vector<MStaff*>& mstaves() const { return _mstaves;      }
       MStaff* mstaff(int staffIdx)          { return _mstaves[staffIdx]; }
+      const MStaff* mstaff(int staffIdx) const { return _mstaves[staffIdx]; }
       bool hasVoices(int staffIdx) const    { return _mstaves[staffIdx]->hasVoices; }
       StaffLines* staffLines(int staffIdx)  { return _mstaves[staffIdx]->lines; }
 
@@ -237,7 +245,7 @@ class Measure : public MeasureBase {
 
       bool empty() const;
       bool isOnlyRests(int track) const;
-
+      bool isOnlyDeletedRests(int track) const;
 
       int playbackCount() const      { return _playbackCount; }
       void setPlaybackCount(int val) { _playbackCount = val; }
@@ -266,6 +274,8 @@ class Measure : public MeasureBase {
 
       BarLineType endBarLineType() const;
       bool endBarLineVisible() const;
+      Shape& staffShape(int staffIdx) { return mstaff(staffIdx)->shape(); }
+      virtual void triggerLayout() const override;
       };
 
 }     // namespace Ms

@@ -165,7 +165,7 @@ void HairpinSegment::editDrag(const EditData& ed)
             if (newHeight < 0.5)
                   newHeight = 0.5;
             hairpin()->setHairpinHeight(Spatium(newHeight));
-            score()->setLayoutAll();
+            triggerLayout();
             }
       LineSegment::editDrag(ed);
       }
@@ -426,7 +426,7 @@ void Hairpin::read(XmlReader& e)
 
 void Hairpin::undoSetHairpinType(Type val)
       {
-      score()->undoChangeProperty(this, P_ID::HAIRPIN_TYPE, int(val));
+      undoChangeProperty(P_ID::HAIRPIN_TYPE, int(val));
       }
 
 //---------------------------------------------------------
@@ -435,7 +435,7 @@ void Hairpin::undoSetHairpinType(Type val)
 
 void Hairpin::undoSetVeloChange(int val)
       {
-      score()->undoChangeProperty(this, P_ID::VELO_CHANGE, val);
+      undoChangeProperty(P_ID::VELO_CHANGE, val);
       }
 
 //---------------------------------------------------------
@@ -444,7 +444,7 @@ void Hairpin::undoSetVeloChange(int val)
 
 void Hairpin::undoSetDynRange(Dynamic::Range val)
       {
-      score()->undoChangeProperty(this, P_ID::DYNAMIC_RANGE, int(val));
+      undoChangeProperty(P_ID::DYNAMIC_RANGE, int(val));
       }
 
 //---------------------------------------------------------
@@ -511,7 +511,7 @@ bool Hairpin::setProperty(P_ID id, const QVariant& v)
             default:
                   return TextLine::setProperty(id, v);
             }
-      score()->setLayoutAll();
+      triggerLayout();
       return true;
       }
 
@@ -578,9 +578,8 @@ void Hairpin::resetProperty(P_ID id)
             default:
                   return TextLine::resetProperty(id);
             }
-      score()->setLayoutAll();
+      triggerLayout();
       }
-
 
 //---------------------------------------------------------
 //   setYoff
@@ -613,11 +612,11 @@ void Hairpin::styleChanged()
 void Hairpin::reset()
       {
       if (lineWidthStyle == PropertyStyle::UNSTYLED)
-            score()->undoChangeProperty(this, P_ID::LINE_WIDTH, propertyDefault(P_ID::LINE_WIDTH), PropertyStyle::STYLED);
+            undoChangeProperty(P_ID::LINE_WIDTH, propertyDefault(P_ID::LINE_WIDTH), PropertyStyle::STYLED);
       if (hairpinHeightStyle == PropertyStyle::UNSTYLED)
-            score()->undoChangeProperty(this, P_ID::HAIRPIN_HEIGHT, propertyDefault(P_ID::HAIRPIN_HEIGHT), PropertyStyle::STYLED);
+            undoChangeProperty(P_ID::HAIRPIN_HEIGHT, propertyDefault(P_ID::HAIRPIN_HEIGHT), PropertyStyle::STYLED);
       if (hairpinContHeightStyle == PropertyStyle::UNSTYLED)
-            score()->undoChangeProperty(this, P_ID::HAIRPIN_CONT_HEIGHT, propertyDefault(P_ID::HAIRPIN_CONT_HEIGHT), PropertyStyle::STYLED);
+            undoChangeProperty(P_ID::HAIRPIN_CONT_HEIGHT, propertyDefault(P_ID::HAIRPIN_CONT_HEIGHT), PropertyStyle::STYLED);
       TextLine::reset();
       }
 

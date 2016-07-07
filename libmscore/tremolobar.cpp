@@ -27,7 +27,7 @@ namespace Ms {
 TremoloBar::TremoloBar(Score* s)
    : Element(s)
       {
-      setFlags(ElementFlag::MOVABLE | ElementFlag::SELECTABLE);
+      setFlags(ElementFlag::MOVABLE | ElementFlag::SELECTABLE | ElementFlag::ON_STAFF);
       }
 
 //---------------------------------------------------------
@@ -155,7 +155,7 @@ void TremoloBar::read(XmlReader& e)
 
 void TremoloBar::undoSetUserMag(qreal val)
       {
-      score()->undoChangeProperty(this, P_ID::MAG, val);
+      undoChangeProperty(P_ID::MAG, val);
       }
 
 //---------------------------------------------------------

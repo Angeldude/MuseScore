@@ -2,7 +2,7 @@
 //  MuseScore
 //  Music Composition & Notation
 //
-//  Copyright (C) 2013 Werner Schweer
+//  Copyright (C) 2013-2016 Werner Schweer
 //
 //  This program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License version 2
@@ -60,8 +60,8 @@ void PaletteBoxButton::contextMenuEvent(QContextMenuEvent* event)
       actionEdit->setDisabled(_systemPalette);
 
       menu.addSeparator();
-      QAction* actionSave = menu.addAction(tr("Save Palette"));
-      QAction* actionLoad = menu.addAction(tr("Load Palette"));
+      QAction* actionSave = menu.addAction(tr("Save Palette..."));
+      QAction* actionLoad = menu.addAction(tr("Load Palette..."));
       actionLoad->setDisabled(_systemPalette);
 
       menu.addSeparator();
@@ -102,6 +102,7 @@ void PaletteBoxButton::enableEditing(bool val)
 
 void PaletteBoxButton::changeEvent(QEvent* ev)
       {
+      QToolButton::changeEvent(ev);
       if (ev->type() == QEvent::FontChange)
             setFixedHeight(QFontMetrics(font()).height() + 2);
       }

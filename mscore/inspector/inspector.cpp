@@ -1,9 +1,9 @@
 //=============================================================================
 //  MuseScore
 //  Music Composition & Notation
-//  $Id:$
+//  $Id: inspector.cpp
 //
-//  Copyright (C) 2011 Werner Schweer
+//  Copyright (C) 2011-2016 Werner Schweer
 //
 //  This program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License version 2
@@ -55,6 +55,7 @@
 #include "libmscore/bend.h"
 #include "libmscore/tremolobar.h"
 #include "libmscore/slur.h"
+#include "libmscore/breath.h"
 
 namespace Ms {
 
@@ -81,12 +82,11 @@ void MuseScore::showInspector(bool visible)
 //---------------------------------------------------------
 
 Inspector::Inspector(QWidget* parent)
-   : QDockWidget(tr("Inspector"), parent)
+   : QDockWidget(parent)
       {
       setObjectName("inspector");
       setAllowedAreas(Qt::DockWidgetAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea));
       sa = new QScrollArea;
-      sa->setAccessibleName(tr("Inspector Subwindow"));
       sa->setFrameShape(QFrame::NoFrame);
       sa->setWidgetResizable(true);
       setWidget(sa);
@@ -95,6 +95,20 @@ Inspector::Inspector(QWidget* parent)
       _inspectorEdit = false;
       ie             = 0;
       _element       = 0;
+      retranslate();
+      }
+
+//---------------------------------------------------------
+//   retranslate
+//---------------------------------------------------------
+
+void Inspector::retranslate()
+      {
+      setWindowTitle(tr("Inspector"));
+      sa->setAccessibleName(tr("Inspector Subwindow"));
+      QList<Element*> el = _el;
+      setElements(QList<Element*>());
+      setElements(el);
       }
 
 //---------------------------------------------------------
@@ -138,13 +152,12 @@ void Inspector::setElements(const QList<Element*>& l)
                   ie = new InspectorEmpty(this);
 
             bool sameTypes = true;
-            foreach(Element* ee, _el) {
+            for (Element* ee : _el) {
                   if (_element->type() != ee->type())
                         sameTypes = false;
                   else {
                         // HACK:
-                        if (ee->type() == Element::Type::NOTE
-                           && static_cast<Note*>(ee)->chord()->isGrace() != static_cast<Note*>(_element)->chord()->isGrace())
+                        if (ee->isNote() && toNote(ee)->chord()->isGrace() != toNote(_element)->chord()->isGrace())
                               sameTypes = false;
                         }
                   }
@@ -310,6 +323,17 @@ void Inspector::setElements(const QList<Element*>& l)
       }
 
 //---------------------------------------------------------
+//   changeEvent
+//---------------------------------------------------------
+
+void Inspector::changeEvent(QEvent *event)
+      {
+      QDockWidget::changeEvent(event);
+      if (event->type() == QEvent::LanguageChange)
+            retranslate();
+      }
+
+//---------------------------------------------------------
 //   setupUi
 //---------------------------------------------------------
 
@@ -331,21 +355,61 @@ void UiInspectorElement::setupUi(QWidget *InspectorElement)
       }
 
 //---------------------------------------------------------
+//   InspectorElementBase
+//---------------------------------------------------------
+
+InspectorElementBase::InspectorElementBase(QWidget* parent)
+   : InspectorBase(parent)
+      {
+      e.setupUi(addWidget());
+
+      iList = {
+            { P_ID::COLOR,     0, 0, e.color,      e.resetColor     },
+            { P_ID::VISIBLE,   0, 0, e.visible,    e.resetVisible   },
+            { P_ID::USER_OFF,  0, 0, e.offsetX,    e.resetX         },
+            { P_ID::USER_OFF,  1, 0, e.offsetY,    e.resetY         },
+            { P_ID::AUTOPLACE, 0, 0, e.autoplace,  e.resetAutoplace },
+            };
+      connect(e.resetAutoplace, SIGNAL(clicked()), SLOT(resetAutoplace()));
+      connect(e.autoplace, SIGNAL(toggled(bool)),  SLOT(autoplaceChanged(bool)));
+      }
+
+//---------------------------------------------------------
+//   setElement
+//---------------------------------------------------------
+
+void InspectorElementBase::setElement()
+      {
+      InspectorBase::setElement();
+      autoplaceChanged(inspector->element()->autoplace());
+      }
+
+//---------------------------------------------------------
+//   autoplaceChanged
+//---------------------------------------------------------
+
+void InspectorElementBase::autoplaceChanged(bool val)
+      {
+      for (auto i : std::vector<QWidget*> { e.offsetX, e.offsetY, e.resetX, e.resetY, e.hRaster, e.vRaster })
+            i->setEnabled(!val);
+      }
+
+//---------------------------------------------------------
+//   resetAutoplace
+//---------------------------------------------------------
+
+void InspectorElementBase::resetAutoplace()
+      {
+      autoplaceChanged(true);
+      }
+
+//---------------------------------------------------------
 //   InspectorElement
 //---------------------------------------------------------
 
 InspectorElement::InspectorElement(QWidget* parent)
-   : InspectorBase(parent)
+   : InspectorElementBase(parent)
       {
-      b.setupUi(addWidget());
-
-      iList = {
-            { P_ID::COLOR,    0, 0, b.color,      b.resetColor   },
-            { P_ID::VISIBLE,  0, 0, b.visible,    b.resetVisible },
-            { P_ID::USER_OFF, 0, 0, b.offsetX,    b.resetX       },
-            { P_ID::USER_OFF, 1, 0, b.offsetY,    b.resetY       }
-            };
-
       mapSignals();
       }
 
@@ -516,7 +580,7 @@ InspectorRest::InspectorRest(QWidget* parent)
 
 void InspectorRest::setElement()
       {
-      Rest* rest = static_cast<Rest*>(inspector->element());
+      Rest* rest = toRest(inspector->element());
       tuplet->setEnabled(rest->tuplet());
       InspectorBase::setElement();
       }
@@ -527,7 +591,7 @@ void InspectorRest::setElement()
 
 void InspectorRest::tupletClicked()
       {
-      Rest* rest = static_cast<Rest*>(inspector->element());
+      Rest* rest = toRest(inspector->element());
       if (rest == 0)
             return;
       Tuplet* tuplet = rest->tuplet();
@@ -569,7 +633,7 @@ InspectorTimeSig::InspectorTimeSig(QWidget* parent)
 void InspectorTimeSig::setElement()
       {
       InspectorBase::setElement();
-      TimeSig* ts = static_cast<TimeSig*>(inspector->element());
+      TimeSig* ts = toTimeSig(inspector->element());
       if (ts->generated())
             t.showCourtesy->setEnabled(false);
       }
@@ -602,7 +666,7 @@ InspectorKeySig::InspectorKeySig(QWidget* parent)
 void InspectorKeySig::setElement()
       {
       InspectorBase::setElement();
-      KeySig* ks = static_cast<KeySig*>(inspector->element());
+      KeySig* ks = toKeySig(inspector->element());
       if (ks->generated())
             k.showCourtesy->setEnabled(false);
       }
@@ -678,7 +742,7 @@ InspectorBend::InspectorBend(QWidget* parent)
 
 void InspectorBend::propertiesClicked()
       {
-      Bend* b = static_cast<Bend*>(inspector->element());
+      Bend* b = toBend(inspector->element());
       Score* score = b->score();
       score->startCmd();
       mscore->currentScoreView()->editBendProperties(b);
@@ -715,7 +779,7 @@ InspectorTremoloBar::InspectorTremoloBar(QWidget* parent)
 
 void InspectorTremoloBar::propertiesClicked()
       {
-      Bend* b = static_cast<Bend*>(inspector->element());
+      Bend* b = toBend(inspector->element());
       Score* score = b->score();
       score->startCmd();
       mscore->currentScoreView()->editBendProperties(b);
@@ -753,16 +817,16 @@ void InspectorClef::setElement()
       InspectorBase::setElement();
 
       // try to locate the 'other clef' of a courtesy / main pair
-      Clef* clef = static_cast<Clef*>(inspector->element());
+      Clef* clef = toClef(inspector->element());
       // if not in a clef-segment-measure hierachy, do nothing
       if (!clef->parent() || clef->parent()->type() != Element::Type::SEGMENT)
             return;
-      Segment*    segm = static_cast<Segment*>(clef->parent());
+      Segment*    segm = toSegment(clef->parent());
       int         segmTick = segm->tick();
       if (!segm->parent() || segm->parent()->type() != Element::Type::MEASURE)
             return;
 
-      Measure* meas = static_cast<Measure*>(segm->parent());
+      Measure* meas = toMeasure(segm->parent());
       Measure* otherMeas = nullptr;
       Segment* otherSegm = nullptr;
       if (segmTick == meas->tick())                         // if clef segm is measure-initial
@@ -774,7 +838,7 @@ void InspectorClef::setElement()
             otherSegm = otherMeas->findSegment(Segment::Type::Clef, segmTick);
       // if any 'other' segment found, look for a clef in the same track as this
       if (otherSegm)
-            otherClef = static_cast<Clef*>(otherSegm->element(clef->track()));
+            otherClef = toClef(otherSegm->element(clef->track()));
       }
 
 //   InspectorClef::valueChanged
@@ -842,7 +906,7 @@ void InspectorTempoText::postInit()
       bool followText = tt.followText->isChecked();
       //tt.resetFollowText->setDisabled(followText);
       tt.tempo->setDisabled(followText);
-      tt.resetTempo->setDisabled(followText);
+      tt.resetTempo->setDisabled(followText || tt.tempo->value() == 120.0);  // a default of 120 BPM is assumed all over the place
       }
 
 //---------------------------------------------------------
@@ -850,22 +914,21 @@ void InspectorTempoText::postInit()
 //---------------------------------------------------------
 
 InspectorDynamic::InspectorDynamic(QWidget* parent)
-   : InspectorBase(parent)
+   : InspectorElementBase(parent)
       {
-      e.setupUi(addWidget());
       t.setupUi(addWidget());
       d.setupUi(addWidget());
 
-      iList = {
-            { P_ID::COLOR,              0, 0, e.color,    e.resetColor    },
-            { P_ID::VISIBLE,            0, 0, e.visible,  e.resetVisible  },
-            { P_ID::USER_OFF,           0, 0, e.offsetX,  e.resetX        },
-            { P_ID::USER_OFF,           1, 0, e.offsetY,  e.resetY        },
-            { P_ID::TEXT_STYLE_TYPE,    0, 0, t.style,    t.resetStyle    },
-            { P_ID::DYNAMIC_RANGE,      0, 0, d.dynRange, d.resetDynRange },
-            { P_ID::VELOCITY,           0, 0, d.velocity, d.resetVelocity }
+      std::vector<InspectorItem> il = {
+            { P_ID::TEXT_STYLE_TYPE,    0, 0, t.style,     t.resetStyle     },
+            { P_ID::DYNAMIC_RANGE,      0, 0, d.dynRange,  d.resetDynRange  },
+            { P_ID::VELOCITY,           0, 0, d.velocity,  d.resetVelocity  },
+            { P_ID::PLACEMENT,          0, 0, d.placement, d.resetPlacement }
             };
-      mapSignals();
+      d.placement->clear();
+      d.placement->addItem(tr("Above"), 0);
+      d.placement->addItem(tr("Below"), 1);
+      mapSignals(il);
       connect(t.resetToStyle, SIGNAL(clicked()), SLOT(resetToStyle()));
       }
 
@@ -887,7 +950,7 @@ void InspectorDynamic::setElement()
                   t.style->addItem(qApp->translate("TextStyle",ts.at(i).name().toUtf8().data()), i);
             }
       t.style->blockSignals(false);
-      InspectorBase::setElement();
+      InspectorElementBase::setElement();
       }
 
 //---------------------------------------------------------
@@ -895,49 +958,27 @@ void InspectorDynamic::setElement()
 //---------------------------------------------------------
 
 InspectorSlur::InspectorSlur(QWidget* parent)
-   : InspectorBase(parent)
+   : InspectorElementBase(parent)
       {
-      e.setupUi(addWidget());
       s.setupUi(addWidget());
 
-      Inspector* inspector = static_cast<Inspector*>(parent);
+      Element* e = inspector->element();
+      bool sameType = true;
 
-      if (inspector != nullptr) {
-            Element* e = inspector->element();
-            bool sameType = true;
-            Element::Type subtype = Element::Type::INVALID;
-
-            if (e->type() == Element::Type::SLUR_SEGMENT)
-                  subtype = toSlurSegment(e)->spanner()->type();
-
-            for (const auto& ee : inspector->el()) {
-                  if (ee->type() != Element::Type::SLUR_SEGMENT) {
-                        sameType = false;
-                        break;
-                        }
-                  if (toSlurSegment(ee)->spanner()->type() != subtype) {
-                        sameType = false;
-                        break;
-                        }
+      for (const auto& ee : inspector->el()) {
+            if (ee->accessibleInfo() != e->accessibleInfo()) {
+                  sameType = false;
+                  break;
                   }
-
-            if (!sameType)
-                  s.elementName->setText("Slur/Tie");
-            else if (subtype == Element::Type::SLUR)
-                  s.elementName->setText(tr("Slur"));
-            else if (subtype == Element::Type::TIE)
-                  s.elementName->setText(tr("Tie"));
             }
+      if (sameType)
+            s.elementName->setText(e->accessibleInfo());
 
-      iList = {
-            { P_ID::COLOR,           0, 0, e.color,         e.resetColor         },
-            { P_ID::VISIBLE,         0, 0, e.visible,       e.resetVisible       },
-            { P_ID::USER_OFF,        0, 0, e.offsetX,       e.resetX             },
-            { P_ID::USER_OFF,        1, 0, e.offsetY,       e.resetY             },
+      const std::vector<InspectorItem> iiList = {
             { P_ID::LINE_TYPE,       0, 0, s.lineType,      s.resetLineType      },
             { P_ID::SLUR_DIRECTION,  0, 0, s.slurDirection, s.resetSlurDirection }
             };
-      mapSignals();
+      mapSignals(iiList);
       }
 
 //---------------------------------------------------------
@@ -959,43 +1000,27 @@ QSize InspectorEmpty::sizeHint() const
       return QSize(255 * guiScaling, 170 * guiScaling);
       }
 
-static const BarLineType types[8] = {
-      BarLineType::NORMAL,
-      BarLineType::BROKEN,
-      BarLineType::DOTTED,
-      BarLineType::DOUBLE,
-      BarLineType::END,
-      BarLineType::START_REPEAT,          // repeat types cannot be set for a single bar line
-      BarLineType::END_REPEAT,            // of a multi-staff scores
-      BarLineType::END_START_REPEAT,
-      };
-
 //---------------------------------------------------------
 //   InspectorBarLine
 //---------------------------------------------------------
 
 InspectorBarLine::InspectorBarLine(QWidget* parent)
-   : InspectorBase(parent)
+   : InspectorElementBase(parent)
       {
-      e.setupUi(addWidget());
       s.setupUi(addWidget());
       b.setupUi(addWidget());
 
-      for (BarLineType t : types)
-            b.type->addItem(BarLine::userTypeName(t), int(t));
+      for (auto i : BarLine::barLineTable)
+            b.type->addItem(qApp->translate("Palette", i.userName), int(i.type));
 
-      iList = {
-            { P_ID::COLOR,             0, 0, e.color,    e.resetColor    },
-            { P_ID::VISIBLE,           0, 0, e.visible,  e.resetVisible  },
-            { P_ID::USER_OFF,          0, 0, e.offsetX,  e.resetX        },
-            { P_ID::USER_OFF,          1, 0, e.offsetY,  e.resetY        },
+      std::vector<InspectorItem> il = {
             { P_ID::LEADING_SPACE,     0, 1, s.leadingSpace,  s.resetLeadingSpace  },
             { P_ID::BARLINE_TYPE,      0, 0, b.type,     b.resetType     },
             { P_ID::BARLINE_SPAN,      0, 0, b.span,     b.resetSpan     },
             { P_ID::BARLINE_SPAN_FROM, 0, 0, b.spanFrom, b.resetSpanFrom },
             { P_ID::BARLINE_SPAN_TO,   0, 0, b.spanTo,   b.resetSpanTo   },
             };
-      mapSignals();
+      mapSignals(il);
       // when any of the span parameters is changed, span data need to be managed
       connect(b.span,          SIGNAL(valueChanged(int)), SLOT(manageSpanData()));
       connect(b.spanFrom,      SIGNAL(valueChanged(int)), SLOT(manageSpanData()));
@@ -1016,25 +1041,20 @@ InspectorBarLine::InspectorBarLine(QWidget* parent)
 void InspectorBarLine::setElement()
       {
       blockSpanDataSignals(true);
-      InspectorBase::setElement();
-      BarLine* bl = static_cast<BarLine*>(inspector->element());
+      InspectorElementBase::setElement();
+      BarLine* bl = toBarLine(inspector->element());
 
       // enable / disable individual type combo items according to score and selected bar line status
       bool bMultiStaff  = bl->score()->nstaves() > 1;
       BarLineType blt   = bl->barLineType();
-      bool isRepeat    = (blt == BarLineType::START_REPEAT
-         || blt == BarLineType::END_REPEAT
-         || blt == BarLineType::END_START_REPEAT);
+      bool isRepeat     = blt & (BarLineType::START_REPEAT | BarLineType::END_REPEAT | BarLineType::END_START_REPEAT);
 
       const QStandardItemModel* model = qobject_cast<const QStandardItemModel*>(b.type->model());
-      for (unsigned i = 0; i < sizeof(types)/sizeof(*types); ++i) {
-            BarLineType type = types[i];
-
+      int i = 0;
+      for (auto& k : BarLine::barLineTable) {
             QStandardItem* item = model->item(i);
             // if combo item is repeat type, should be disabled for multi-staff scores
-            if (type == BarLineType::START_REPEAT
-                        || type == BarLineType::END_REPEAT
-                        || type == BarLineType::END_START_REPEAT) {
+            if (k.type & (BarLineType::START_REPEAT | BarLineType::END_REPEAT | BarLineType::END_START_REPEAT)) {
                   // disable / enable
                   item->setFlags(bMultiStaff ?
                         item->flags() & ~(Qt::ItemIsSelectable|Qt::ItemIsEnabled) :
@@ -1046,6 +1066,7 @@ void InspectorBarLine::setElement()
                         item->flags() & ~(Qt::ItemIsSelectable|Qt::ItemIsEnabled) :
                         item->flags() | (Qt::ItemFlags)(Qt::ItemIsSelectable|Qt::ItemIsEnabled) );
                   }
+            ++i;
             }
       manageSpanData();
       blockSpanDataSignals(false);
@@ -1057,7 +1078,7 @@ void InspectorBarLine::setElement()
 
 void InspectorBarLine::presetDefaultClicked()
       {
-      BarLine* bl = static_cast<BarLine*>(inspector->element());
+      BarLine* bl = toBarLine(inspector->element());
       Score* score = bl->score();
       score->startCmd();
 
@@ -1075,7 +1096,7 @@ void InspectorBarLine::presetDefaultClicked()
 
 void InspectorBarLine::presetTick1Clicked()
       {
-      BarLine* bl = static_cast<BarLine*>(inspector->element());
+      BarLine* bl = toBarLine(inspector->element());
       Score* score = bl->score();
       score->startCmd();
 
@@ -1093,7 +1114,7 @@ void InspectorBarLine::presetTick1Clicked()
 
 void InspectorBarLine::presetTick2Clicked()
       {
-      BarLine* bl = static_cast<BarLine*>(inspector->element());
+      BarLine* bl = toBarLine(inspector->element());
       Score* score = bl->score();
       score->startCmd();
 
@@ -1111,7 +1132,7 @@ void InspectorBarLine::presetTick2Clicked()
 
 void InspectorBarLine::presetShort1Clicked()
       {
-      BarLine* bl = static_cast<BarLine*>(inspector->element());
+      BarLine* bl = toBarLine(inspector->element());
       Score* score = bl->score();
       score->startCmd();
 
@@ -1130,7 +1151,7 @@ void InspectorBarLine::presetShort1Clicked()
 
 void InspectorBarLine::presetShort2Clicked()
       {
-      BarLine* bl = static_cast<BarLine*>(inspector->element());
+      BarLine* bl = toBarLine(inspector->element());
       Score* score = bl->score();
       score->startCmd();
 
@@ -1151,7 +1172,7 @@ void InspectorBarLine::presetShort2Clicked()
 
 void InspectorBarLine::manageSpanData()
       {
-      BarLine* bl = static_cast<BarLine*>(inspector->element());
+      BarLine* bl = toBarLine(inspector->element());
 
       // determine MIN and MAX for SPANFROM and SPANTO
       Staff* staffFrom  = bl->staff();
@@ -1199,13 +1220,24 @@ void InspectorBarLine::blockSpanDataSignals(bool val)
       }
 
 //---------------------------------------------------------
-//   InspectorRest
+//   InspectorCaesura
 //---------------------------------------------------------
 
 InspectorCaesura::InspectorCaesura(QWidget* parent) : InspectorBase(parent)
       {
       e.setupUi(addWidget());
       c.setupUi(addWidget());
+
+      Breath* b = toBreath(inspector->element());
+      bool sameType = true;
+      for (const auto& ee : inspector->el()) {
+            if (ee->accessibleInfo() != b->accessibleInfo()) {
+                  sameType = false;
+                  break;
+                  }
+            }
+      if (sameType)
+            c.elementName->setText(b->accessibleInfo());
 
       iList = {
             { P_ID::COLOR,          0, 0, e.color,         e.resetColor         },

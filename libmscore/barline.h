@@ -57,10 +57,15 @@ struct BarLineTableItem {
 
 //---------------------------------------------------------
 //   @@ BarLine
+//
+//   @P barLineType  enum  (BarLineType.NORMAL, .DOUBLE, .START_REPEAT, .END_REPEAT, .BROKEN, .END, .END_START_REPEAT, .DOTTED)
 //---------------------------------------------------------
 
 class BarLine : public Element {
       Q_OBJECT
+
+      Q_PROPERTY(Ms::MSQE_BarLineType::E barLineType READ qmlBarLineType)
+      Q_ENUMS(Ms::MSQE_BarLineType::E)
 
       BarLineType _barLineType { BarLineType::NORMAL };
       int _span                { 1 };           // number of staves spanned by the barline
@@ -80,7 +85,7 @@ class BarLine : public Element {
       void drawDots(QPainter* painter, qreal x) const;
 
    public:
-      BarLine(Score*);
+      BarLine(Score* s = 0);
       BarLine &operator=(const BarLine&) = delete;
 
       virtual BarLine* clone() const override     { return new BarLine(*this); }
@@ -94,9 +99,9 @@ class BarLine : public Element {
       virtual void add(Element*) override;
       virtual void remove(Element*) override;
       virtual QPainterPath outline() const override;
-
       virtual bool acceptDrop(const DropData&) const override;
       virtual Element* drop(const DropData&) override;
+      virtual bool isEditable() const override    { return true; }
 
       Segment* segment() const        { return (Segment*)parent(); }
 
@@ -129,6 +134,8 @@ class BarLine : public Element {
       BarLineType barLineType() const    { return _barLineType;  }
       static BarLineType barLineType(const QString&);
 
+      Ms::MSQE_BarLineType::E qmlBarLineType() const { return static_cast<Ms::MSQE_BarLineType::E>(_barLineType); }
+
       virtual int subtype() const override         { return int(_barLineType); }
       virtual QString subtypeName() const override { return qApp->translate("barline", barLineTypeName().toUtf8()); }
 
@@ -148,7 +155,12 @@ class BarLine : public Element {
 
       virtual QString accessibleInfo() const override;
       virtual QString accessibleExtraInfo() const override;
+
+      static const std::vector<BarLineTableItem> barLineTable;
       };
 }     // namespace Ms
+
+Q_DECLARE_METATYPE(Ms::MSQE_BarLineType::E);
+
 #endif
 

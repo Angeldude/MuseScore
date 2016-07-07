@@ -151,7 +151,7 @@
         <Rest>
           <lid>7</lid>
           <durationType>measure</durationType>
-          <duration z="2" n="4"/>
+          <duration>2/4</duration>
           </Rest>
         <BarLine>
           <subtype>end</subtype>
@@ -201,6 +201,10 @@
       <metaTag name="partName">Flute</metaTag>
       <PageList>
         <Page>
+          <System>
+            </System>
+          <System>
+            </System>
           </Page>
         </PageList>
       <Part>
@@ -298,11 +302,11 @@
               </Note>
             </Chord>
           </Measure>
-        <Measure number="1">
+        <Measure number="2">
           <Rest>
             <lid>7</lid>
             <durationType>measure</durationType>
-            <duration z="2" n="4"/>
+            <duration>2/4</duration>
             </Rest>
           <BarLine>
             <subtype>end</subtype>

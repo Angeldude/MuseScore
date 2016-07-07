@@ -423,7 +423,7 @@ Element* Accidental::drop(const DropData& data)
 
 void Accidental::undoSetHasBracket(bool val)
       {
-      score()->undoChangeProperty(this, P_ID::ACCIDENTAL_BRACKET, val);
+      undoChangeProperty(P_ID::ACCIDENTAL_BRACKET, val);
       }
 
 //---------------------------------------------------------
@@ -432,7 +432,7 @@ void Accidental::undoSetHasBracket(bool val)
 
 void Accidental::undoSetSmall(bool val)
       {
-      score()->undoChangeProperty(this, P_ID::SMALL, val);
+      undoChangeProperty(P_ID::SMALL, val);
       }
 
 //---------------------------------------------------------
@@ -484,8 +484,7 @@ bool Accidental::setProperty(P_ID propertyId, const QVariant& v)
             default:
                   return Element::setProperty(propertyId, v);
             }
-      layout();
-      score()->setLayoutAll();  // spacing changes
+      triggerLayout();
       return true;
       }
 

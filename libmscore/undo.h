@@ -39,6 +39,7 @@
 #include "cleflist.h"
 #include "note.h"
 #include "drumset.h"
+#include "rest.h"
 
 Q_DECLARE_LOGGING_CATEGORY(undoRedo)
 
@@ -82,8 +83,6 @@ class Spanner;
 class BarLine;
 enum class ClefType : signed char;
 enum class PlayEventType : char;
-
-// #define DEBUG_UNDO
 
 #define UNDO_NAME(a)  virtual const char* name() const override { return a; }
 
@@ -545,20 +544,6 @@ class RemoveElement : public UndoCommand {
       virtual void redo();
       virtual void cleanup(bool);
       virtual const char* name() const override;
-      };
-
-//---------------------------------------------------------
-//   ChangeConcertPitch
-//---------------------------------------------------------
-
-class ChangeConcertPitch : public UndoCommand {
-      Score* score;
-      bool val;
-      void flip();
-
-   public:
-      ChangeConcertPitch(Score* s, bool val);
-      UNDO_NAME("ChangeConcertPitch")
       };
 
 //---------------------------------------------------------
@@ -1305,6 +1290,20 @@ class ChangeDrumset : public UndoCommand {
       UNDO_NAME("ChangeDrumset")
       };
 
+//---------------------------------------------------------
+//   ChangeGap
+//---------------------------------------------------------
+
+class ChangeGap : public UndoCommand {
+      Rest* rest;
+      bool v;
+
+      void flip();
+
+   public:
+      ChangeGap(Rest* r, bool v) : rest(r), v(v) {}
+      UNDO_NAME("ChangeGap")
+      };
+
 }     // namespace Ms
 #endif
-

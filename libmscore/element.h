@@ -72,6 +72,7 @@ class System;
 class Lyrics;
 class Stem;
 class SlurSegment;
+class OttavaSegment;
 class Beam;
 class Hook;
 class StemSlash;
@@ -79,6 +80,21 @@ class Spacer;
 class StaffLines;
 class Ambitus;
 class Bracket;
+class InstrumentChange;
+class Text;
+class Hairpin;
+class HairpinSegment;
+class Bend;
+class RepeatMeasure;
+class Tuplet;
+class NoteDot;
+class Dynamic;
+class InstrumentName;
+class DurationElement;
+class Accidental;
+class TextLine;
+class Pedal;
+class LedgerLine;
 
 enum class SymId;
 
@@ -315,6 +331,7 @@ class Element : public QObject, public ScoreElement {
       Placement _placement;
 
       mutable ElementFlags _flags;
+      bool _autoplace;
 
       int _track;                 ///< staffIdx * VOICES + voice
       qreal _mag;                 ///< standard magnification (derived value)
@@ -375,10 +392,10 @@ class Element : public QObject, public ScoreElement {
       qreal pageX() const;
       qreal canvasX() const;
 
-      const QPointF& userOff() const          { return _userOff;  }
-      virtual void setUserOff(const QPointF& o)       { _userOff = o;     }
-      void setUserXoffset(qreal v)            { _userOff.setX(v); }
-      void setUserYoffset(qreal v)            { _userOff.setY(v); }
+      const QPointF& userOff() const             { return _userOff;  }
+      virtual void setUserOff(const QPointF& o)  { _userOff = o;     }
+      void setUserXoffset(qreal v)               { _userOff.setX(v); }
+      void setUserYoffset(qreal v)               { _userOff.setY(v); }
 
       qreal& rUserXoffset()                   { return _userOff.rx(); }
       qreal& rUserYoffset()                   { return _userOff.ry(); }
@@ -567,11 +584,13 @@ class Element : public QObject, public ScoreElement {
       bool isSegmentFlag() const           { return flag(ElementFlag::SEGMENT);     }
       uint tag() const                 { return _tag;                      }
       void setTag(uint val)            { _tag = val;                       }
+      bool autoplace() const           { return _autoplace; }
+      void setAutoplace(bool v)        { _autoplace = v; }
 
       virtual QVariant getProperty(P_ID) const override;
       virtual bool setProperty(P_ID, const QVariant&) override;
       virtual QVariant propertyDefault(P_ID) const override;
-      void undoChangeProperty(P_ID, const QVariant&);
+      void undoChangeProperty(P_ID, const QVariant&, PropertyStyle ps = PropertyStyle::NOSTYLE);
       void resetProperty(P_ID);
       void undoResetProperty(P_ID);
       bool custom(P_ID) const;
@@ -611,6 +630,8 @@ class Element : public QObject, public ScoreElement {
       virtual QString accessibleExtraInfo() const {    // used to return info that will be appended to accessibleInfo
             return QString();                          // and passed only to the screen-reader
             }
+
+      virtual void triggerLayout() const;
 
       //---------------------------------------------------
       // check type
@@ -673,6 +694,20 @@ class Element : public QObject, public ScoreElement {
       CONVERT(StaffLines,    STAFF_LINES)
       CONVERT(Ambitus,       AMBITUS)
       CONVERT(Bracket,       BRACKET)
+      CONVERT(InstrumentChange, INSTRUMENT_CHANGE)
+      CONVERT(Hairpin,       HAIRPIN)
+      CONVERT(HairpinSegment,HAIRPIN_SEGMENT)
+      CONVERT(Bend,          BEND)
+      CONVERT(RepeatMeasure, REPEAT_MEASURE)
+      CONVERT(Tuplet,        TUPLET)
+      CONVERT(NoteDot,       NOTEDOT)
+      CONVERT(Dynamic,       DYNAMIC)
+      CONVERT(InstrumentName, INSTRUMENT_NAME)
+      CONVERT(Accidental,    ACCIDENTAL)
+      CONVERT(TextLine,      TEXTLINE)
+      CONVERT(Pedal,         PEDAL)
+      CONVERT(OttavaSegment, OTTAVA_SEGMENT)
+      CONVERT(LedgerLine,    LEDGER_LINE)
 #undef CONVERT
       };
 
@@ -694,9 +729,14 @@ static inline const ChordRest* toChordRest(const Element* e) {
          || e->type() == Element::Type::REPEAT_MEASURE);
       return (const ChordRest*)e;
       }
+static inline const DurationElement* toDurationElement(const Element* e) {
+      Q_ASSERT(e == 0 || e->type() == Element::Type::CHORD || e->type() == Element::Type::REST
+         || e->type() == Element::Type::REPEAT_MEASURE || e->type() == Element::Type::TUPLET);
+      return (const DurationElement*)e;
+      }
 
 #define CONVERT(a,b) \
-static inline a* to##a(Element* e) { Q_ASSERT(e == 0 || e->type() == Element::Type::b); return (a*)e; } \
+static inline a* to##a(Element* e)             { Q_ASSERT(e == 0 || e->type() == Element::Type::b); return (a*)e; } \
 static inline const a* to##a(const Element* e) { Q_ASSERT(e == 0 || e->type() == Element::Type::b); return (const a*)e; }
 
       CONVERT(Note,          NOTE)
@@ -739,6 +779,21 @@ static inline const a* to##a(const Element* e) { Q_ASSERT(e == 0 || e->type() ==
       CONVERT(StaffLines,    STAFF_LINES)
       CONVERT(Ambitus,       AMBITUS)
       CONVERT(Bracket,       BRACKET)
+      CONVERT(InstrumentChange, INSTRUMENT_CHANGE)
+      CONVERT(Text,          TEXT)
+      CONVERT(Hairpin,       HAIRPIN)
+      CONVERT(HairpinSegment,HAIRPIN_SEGMENT)
+      CONVERT(Bend,          BEND)
+      CONVERT(RepeatMeasure, REPEAT_MEASURE)
+      CONVERT(Tuplet,        TUPLET)
+      CONVERT(NoteDot,       NOTEDOT)
+      CONVERT(Dynamic,       DYNAMIC)
+      CONVERT(InstrumentName, INSTRUMENT_NAME)
+      CONVERT(Accidental,    ACCIDENTAL)
+      CONVERT(TextLine,     TEXTLINE)
+      CONVERT(Pedal,         PEDAL)
+      CONVERT(OttavaSegment, OTTAVA_SEGMENT)
+      CONVERT(LedgerLine,    LEDGER_LINE)
 #undef CONVERT
 
 //---------------------------------------------------------

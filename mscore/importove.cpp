@@ -1218,7 +1218,6 @@ void OveToMScore::convertMeasureMisc(Measure* measure, int part, int staff, int 
             measure->setBreakMultiMeasureRest(true);
             }
 
-#if 0 // TODO
       // barline
       BarLineType bartype = BarLineType::NORMAL;
 
@@ -1257,12 +1256,11 @@ void OveToMScore::convertMeasureMisc(Measure* measure, int part, int staff, int 
                   break;
             }
 
-      if(measure->no() == ove_->getMeasureCount()-1){
-            bartype = BarLineType::END;
-            }
+      if (bartype != BarLineType::NORMAL && bartype != BarLineType::END_REPEAT && bartype != BarLineType::START_REPEAT && bartype != BarLineType::END_START_REPEAT && bartype != BarLineType::END)
+            measure->setEndBarLineType(bartype, 0);
 
-      measure->setEndBarLineType(bartype, false);
-#endif
+      if (bartype == BarLineType::END_REPEAT)
+            measure->setRepeatEnd(true);
 
       if(measurePtr->getLeftBarline() == OVE::BarLineType::RepeatLeft){
             //bartype = BarLineType::START_REPEAT;
@@ -1465,6 +1463,7 @@ void OveToMScore::convertNotes(Measure* measure, int part, int staff, int track)
                               yOffset -= qreal(lineOffset + stepOffset);
                               yOffset *= score_->spatium()/2.0;
                               cr->setUserYoffset(yOffset);
+                              cr->setAutoplace(false);
                               }
                         }
                   }

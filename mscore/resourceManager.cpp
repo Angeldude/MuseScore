@@ -19,6 +19,7 @@ namespace Ms {
 
 extern QString dataPath;
 extern QString mscoreGlobalShare;
+extern QString localeName;
 
 ResourceManager::ResourceManager(QWidget *parent) :
       QDialog(parent)
@@ -38,14 +39,11 @@ ResourceManager::ResourceManager(QWidget *parent) :
 
 void ResourceManager::displayPlugins()
       {
-      tabs->setTabText(1, "Plugins");
       textBrowser->setText("hello");
       }
 
 void ResourceManager::displayLanguages()
       {
-      tabs->setTabText(0,tr("Languages"));
-
       // Download details.json
       DownloadUtils *js = new DownloadUtils(this);
       js->setTarget(baseAddr + "languages/details.json");
@@ -185,6 +183,9 @@ void ResourceManager::download()
             if (result) {
                   QFile::remove(localPath);
                   button->setText(tr("Updated"));
+                  //  retranslate the UI if current language is updated
+                  if (data == buttonMap.first())
+                        setMscoreLocale(localeName);
                   }
             else {
                   button->setText(tr("Failed, try again"));

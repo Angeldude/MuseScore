@@ -41,7 +41,7 @@
       </font>
      </property>
      <property name="text">
-      <string notr="true">Slur/Tie</string>
+      <string>Slur/Tie</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -84,13 +84,17 @@
         </sizepolicy>
        </property>
        <property name="toolTip">
-        <string>Reset value</string>
+        <string>Reset to default</string>
        </property>
        <property name="accessibleName">
-        <string>Reset Line type value</string>
+        <string>Reset 'Line type' value</string>
        </property>
        <property name="text">
-        <string notr="true">...</string>
+        <string notr="true"/>
+       </property>
+       <property name="icon">
+        <iconset resource="../musescore.qrc">
+         <normaloff>:/data/icons/edit-reset.svg</normaloff>:/data/icons/edit-reset.svg</iconset>
        </property>
       </widget>
      </item>
@@ -144,13 +148,17 @@
         </sizepolicy>
        </property>
        <property name="toolTip">
-        <string>Reset value</string>
+        <string>Reset to default</string>
        </property>
        <property name="accessibleName">
-        <string>Reset Direction value</string>
+        <string>Reset 'Direction' value</string>
        </property>
        <property name="text">
-        <string notr="true">...</string>
+        <string notr="true"/>
+       </property>
+       <property name="icon">
+        <iconset resource="../musescore.qrc">
+         <normaloff>:/data/icons/edit-reset.svg</normaloff>:/data/icons/edit-reset.svg</iconset>
        </property>
       </widget>
      </item>
@@ -205,6 +213,8 @@
   <tabstop>slurDirection</tabstop>
   <tabstop>resetSlurDirection</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="../musescore.qrc"/>
+ </resources>
  <connections/>
 </ui>

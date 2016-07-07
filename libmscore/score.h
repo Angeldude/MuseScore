@@ -115,6 +115,8 @@ enum class Pad : char {
       REST,
       DOT,
       DOTDOT,
+      DOT3,
+      DOT4
       };
 
 //---------------------------------------------------------
@@ -257,8 +259,8 @@ enum class UpdateMode {
 
 class CmdState {
       UpdateMode _updateMode { UpdateMode::DoNothing };
-      int _startTick;            // start tick for mode LayoutTick
-      int _endTick;              // end tick for mode LayoutTick
+      int _startTick {-1};            // start tick for mode LayoutTick
+      int _endTick   {-1};              // end tick for mode LayoutTick
 
    public:
       LayoutFlags layoutFlags;
@@ -275,8 +277,8 @@ class CmdState {
       bool updateAll() const   { return int(_updateMode) >= int(UpdateMode::UpdateAll); }
       bool updateRange() const { return _updateMode == UpdateMode::Update; }
       void setTick(int t);
-      int startTick() const { return _startTick; }
-      int endTick() const   { return _endTick; }
+      int startTick() const    { return _startTick; }
+      int endTick() const      { return _endTick; }
       };
 
 class UpdateState {
@@ -324,7 +326,7 @@ class Score : public QObject, public ScoreElement {
       Q_OBJECT
       Q_PROPERTY(QString                        composer          READ composer)
       Q_PROPERTY(int                            duration          READ duration)
-//TODO-ws      Q_PROPERTY(QQmlListProperty<Ms::Excerpt>  excerpts          READ qmlExcerpts)
+      Q_PROPERTY(QQmlListProperty<Ms::Excerpt>  excerpts          READ qmlExcerpts)
       Q_PROPERTY(Ms::Measure*                   firstMeasure      READ firstMeasure)
       Q_PROPERTY(Ms::Measure*                   firstMeasureMM    READ firstMeasureMM)
       Q_PROPERTY(int                            harmonyCount      READ harmonyCount)
@@ -380,6 +382,7 @@ class Score : public QObject, public ScoreElement {
 
       MeasureBaseList _measures;          // here are the notes
       SpannerMap _spanner;
+      // https://github.com/musescore/MuseScore/commit/c69d2a9262051be314768e24686d14913c45da47
       std::set<Spanner*> _unmanagedSpanner;
 
       UpdateState _updateState;
@@ -495,7 +498,7 @@ class Score : public QObject, public ScoreElement {
       void selectAdd(Element* e);
       void selectRange(Element* e, int staffIdx);
 
-      QQmlListProperty<Ms::Part> qmlParts() { return QQmlListProperty<Ms::Part>(this, _parts); }
+      QQmlListProperty<Ms::Part> qmlParts() { return QmlListAccess<Ms::Part>(this, _parts); }
 
       void getNextMeasure(LayoutContext&);      // get next measure for layout
       bool collectPage(LayoutContext&);
@@ -525,6 +528,8 @@ class Score : public QObject, public ScoreElement {
 
       virtual inline QList<Excerpt*>& excerpts();
       virtual inline const QList<Excerpt*>& excerpts() const;
+
+      QQmlListProperty<Ms::Excerpt> qmlExcerpts() { return QmlListAccess<Ms::Excerpt>(this, excerpts()); }
 
       virtual const char* name() const override { return "Score"; }
 
@@ -653,6 +658,7 @@ class Score : public QObject, public ScoreElement {
       void startCmd();                          // start undoable command
       void endCmd(bool rollback = false);       // end undoable command
       void update();
+      void undoRedo(bool undo);
 
       void cmdRemoveTimeSig(TimeSig*);
       void cmdAddTimeSig(Measure*, int staffIdx, TimeSig*, bool local);
@@ -849,7 +855,6 @@ class Score : public QObject, public ScoreElement {
       void adjustBracketsIns(int sidx, int eidx);
       void adjustKeySigs(int sidx, int eidx, KeyList km);
 
-      void endUndoRedo();
       Measure* searchLabel(const QString& s);
       Measure* searchLabelWithinSectionFirst(const QString& s, Measure* sectionStartMeasure, Measure* sectionEndMeasure);
       virtual inline RepeatList* repeatList() const;
@@ -1067,7 +1072,7 @@ class Score : public QObject, public ScoreElement {
 
       //@ ??
       Q_INVOKABLE void cropPage(qreal margins);
-      bool sanityCheck(const QString& name);
+      bool sanityCheck(const QString& name = QString());
 
       bool checkKeys();
       bool checkClefs();
@@ -1080,7 +1085,6 @@ class Score : public QObject, public ScoreElement {
       virtual bool setProperty(P_ID, const QVariant&) override;
       virtual QVariant propertyDefault(P_ID) const override;
 
-      virtual inline bool undoRedo() const;
       virtual inline QQueue<MidiInputEvent>* midiInputQueue();
 
       friend class ChangeSynthesizerState;
@@ -1105,7 +1109,7 @@ class MasterScore : public Score {
       Omr* _omr;
       bool _showOmr;
 
-      bool _undoRedo;               ///< true if in processing a undo/redo
+//      bool _undoRedo;               ///< true if in processing a undo/redo
       int _midiPortCount { 0 };     // A count of JACK/ALSA midi out ports
       QQueue<MidiInputEvent> _midiInputQueue;
       QList<MidiMapping> _midiMapping;
@@ -1114,7 +1118,6 @@ class MasterScore : public Score {
       QSet<int> occupiedMidiChannels;     // each entry is port*16+channel, port range: 0-inf, channel: 0-15
       unsigned int searchMidiMappingFrom; // makes getting next free MIDI mapping faster
 
-      QQmlListProperty<Ms::Excerpt> qmlExcerpts() { return QQmlListProperty<Ms::Excerpt>(this, _excerpts); }
       void parseVersion(const QString&);
       void reorderMidiMapping();
       void removeDeletedMidiMapping();
@@ -1126,9 +1129,9 @@ class MasterScore : public Score {
       virtual ~MasterScore();
       MasterScore* clone();
 
-      void setUndoRedo(bool val)              { _undoRedo = val;    }
+//      void setUndoRedo(bool val)              { _undoRedo = val;    }
+//      virtual bool undoRedo() const override                    { return _undoRedo;   }
 
-      virtual bool undoRedo() const override                    { return _undoRedo;   }
       virtual bool isMaster() const override                    { return true;        }
       virtual UndoStack* undoStack() const override             { return _undo;       }
       virtual TimeSigMap* sigmap() const override               { return _sigmap;     }
@@ -1187,7 +1190,7 @@ class MasterScore : public Score {
       void removeExcerpt(Score*);
       };
 
-inline bool Score::undoRedo() const                    { return _masterScore->undoRedo();       }
+// inline bool Score::undoRedo() const                    { return _masterScore->undoRedo();       }
 inline UndoStack* Score::undoStack() const             { return _masterScore->undoStack();      }
 inline RepeatList* Score::repeatList()  const          { return _masterScore->repeatList();     }
 inline TempoMap* Score::tempomap() const               { return _masterScore->tempomap();       }

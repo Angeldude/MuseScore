@@ -77,7 +77,7 @@ class MeasureBase : public Element {
                                           ///< but outside the staff
       LayoutBreak* _sectionBreak { 0 };
 
-      int _tick;
+      int _tick              { 0 };
       int _no                { 0            };    ///< Measure number, counting from zero
       int _noOffset          { 0            };    ///< Offset to measure number
 
@@ -146,7 +146,7 @@ class MeasureBase : public Element {
       virtual bool readProperties(XmlReader&) override;
 
       virtual int tick() const override      { return _tick;  }
-      virtual int ticks() const              { return 0;       }
+      virtual int ticks() const              { return 0;      }
       int endTick() const                    { return tick() + ticks();  }
       void setTick(int t)                    { _tick = t;     }
 

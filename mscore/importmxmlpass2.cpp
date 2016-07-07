@@ -842,11 +842,19 @@ static void addElemOffset(Element* el, int track, const QString& placement, Meas
       // move to correct position
       // TODO: handle rx, ry
       qreal y = 0;
-      if (placement == "above") y += offsAbove;
-      if (placement == "below") y += offsBelow;
-      //qDebug("   y = %g", y);
-      y *= el->score()->spatium();
-      el->setUserOff(QPoint(0, y));
+      if (el->isDynamic()) {
+            el->setPlacement(placement == "above"
+               ? Element::Placement::ABOVE : Element::Placement::BELOW);
+            }
+      else {
+            if (placement == "above")
+                  y += offsAbove;
+            if (placement == "below")
+                  y += offsBelow;
+            //qDebug("   y = %g", y);
+            y *= el->score()->spatium();
+            el->setUserOff(QPoint(0, y));
+            }
       el->setTrack(track);
       Segment* s = measure->getSegment(Segment::Type::ChordRest, tick);
       s->add(el);
@@ -3664,6 +3672,7 @@ void MusicXMLParserPass2::time(const QString& partId, Measure* measure, const in
       QString beats;
       QString beatType;
       QString timeSymbol = _e.attributes().value("symbol").toString();
+      bool printObject = _e.attributes().value("print-object") != "no";
 
       while (_e.readNextStartElement()) {
             if (_e.name() == "beats")
@@ -3688,6 +3697,7 @@ void MusicXMLParserPass2::time(const QString& partId, Measure* measure, const in
                   //int staves = part->nstaves();
                   for (int i = 0; i < _pass1.getPart(partId)->nstaves(); ++i) {
                         TimeSig* timesig = new TimeSig(_score);
+                        timesig->setVisible(printObject);
                         int track = _pass1.trackForPart(partId) + i * VOICES;
                         timesig->setTrack(track);
                         timesig->setSig(fractionTSig, st);

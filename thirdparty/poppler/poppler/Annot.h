@@ -21,7 +21,7 @@
 // Copyright (C) 2008 Hugo Mercier <hmercier31@gmail.com>
 // Copyright (C) 2008 Pino Toscano <pino@kde.org>
 // Copyright (C) 2008 Tomas Are Haavet <tomasare@gmail.com>
-// Copyright (C) 2009-2011, 2013 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2009-2011, 2013, 2016 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2012, 2013 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2012, 2015 Tobias Koenig <tokoe@kdab.com>
 // Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
@@ -191,7 +191,7 @@ public:
     AnnotCoord coord1, coord2, coord3, coord4;
   };
 
-  AnnotQuadrilaterals(Array *array, PDFRectangle *);
+  AnnotQuadrilaterals(Array *array, PDFRectangle *rect);
   AnnotQuadrilaterals(AnnotQuadrilateral **quads, int quadsLength);
   ~AnnotQuadrilaterals();
 
@@ -706,7 +706,7 @@ public:
   void setOpen(GBool openA);
 
 protected:
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
 
   Object parent; // Parent
   GBool open;   // Open
@@ -761,7 +761,7 @@ protected:
   AnnotExternalDataType exData; // ExData
 
 private:
-  void initialize(PDFDoc *docA, Dict *dict, Object *);
+  void initialize(PDFDoc *docA, Dict *dict, Object *obj);
 };
 
 //------------------------------------------------------------------------
@@ -799,7 +799,7 @@ public:
 
 private:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
 
   GBool open;                       // Open       (Default false)
   GooString *icon;                  // Name       (Default Note)
@@ -826,7 +826,7 @@ class AnnotMovie: public Annot {
   Movie* getMovie() { return movie; }
 
  private:
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
 
   GooString* title;      // T
   Movie* movie;          // Movie + A
@@ -847,11 +847,11 @@ class AnnotScreen: public Annot {
   GooString* getTitle() { return title; }
 
   AnnotAppearanceCharacs *getAppearCharacs() { return appearCharacs; }
-  LinkAction* getAction() { return action; }
-  LinkAction *getAdditionalAction(AdditionalActionsType type);
+  LinkAction* getAction() { return action; } // The caller should now delete the result
+  LinkAction *getAdditionalAction(AdditionalActionsType type); // The caller should delete the result
 
  private:
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
 
 
   GooString* title;                      // T
@@ -890,7 +890,7 @@ public:
 
 protected:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
 
   LinkAction *action;                  // A, Dest
   AnnotLinkEffect linkEffect;          // H          (Default I)
@@ -945,7 +945,7 @@ public:
 
 protected:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
   static void parseAppearanceString(GooString *da, double &fontsize, AnnotColor* &fontcolor);
   void generateFreeTextAppearance();
 
@@ -1018,7 +1018,7 @@ public:
 
 protected:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
   void generateLineAppearance();
 
   // required
@@ -1063,7 +1063,7 @@ public:
 
 protected:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
   
   AnnotQuadrilaterals *quadrilaterals; // QuadPoints
 };
@@ -1086,7 +1086,7 @@ public:
 
 private:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
 
   GooString *icon;                  // Name       (Default Draft)
 };
@@ -1114,7 +1114,7 @@ public:
 
 private:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
 
   AnnotColor *interiorColor;        // IC
   AnnotBorderEffect *borderEffect;  // BE
@@ -1156,7 +1156,7 @@ public:
 
 private:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
 
   // required
   AnnotPath *vertices;              // Vertices
@@ -1196,7 +1196,7 @@ public:
 
 private:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
 
   AnnotCaretSymbol symbol;       // Sy         (Default None)
   PDFRectangle *caretRect;       // RD (combined with Rect)
@@ -1223,7 +1223,7 @@ public:
 
 private:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
   void writeInkList(AnnotPath **paths, int n_paths, Array *dest_array);
   void parseInkList(Array *src_array);
   void freeInkList();
@@ -1256,7 +1256,7 @@ public:
 
 private:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
 
   // required
   Object file;      // FS
@@ -1284,7 +1284,7 @@ public:
 
 private:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
 
   // required
   Sound *sound;                  // Sound
@@ -1322,14 +1322,14 @@ public:
 
   AnnotWidgetHighlightMode getMode() { return mode; }
   AnnotAppearanceCharacs *getAppearCharacs() { return appearCharacs; }
-  LinkAction *getAction() { return action; }
-  LinkAction *getAdditionalAction(AdditionalActionsType type);
-  LinkAction *getFormAdditionalAction(FormAdditionalActionsType type);
+  LinkAction *getAction() { return action; }  // The caller should not delete the result
+  LinkAction *getAdditionalAction(AdditionalActionsType type); // The caller should delete the result
+  LinkAction *getFormAdditionalAction(FormAdditionalActionsType type); // The caller should delete the result
   Dict *getParent() { return parent; }
 
 private:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
 
   void drawText(GooString *text, GooString *da, GfxResources *resources,
 		GBool multiline, int comb, int quadding,
@@ -1405,7 +1405,7 @@ public:
 
 private:
 
-  void initialize(PDFDoc *, Dict *dict);
+  void initialize(PDFDoc *docA, Dict *dict);
 
   Activation *activation;  // 3DA
 };

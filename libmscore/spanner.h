@@ -57,6 +57,12 @@ class SpannerSegment : public Element {
 
       void setSpannerSegmentType(SpannerSegmentType s) { _spannerSegmentType = s;               }
       SpannerSegmentType spannerSegmentType() const    { return _spannerSegmentType;            }
+      bool isSingleType() const                        { return spannerSegmentType() == SpannerSegmentType::SINGLE; }
+      bool isBeginType() const                         { return spannerSegmentType() == SpannerSegmentType::BEGIN;  }
+      bool isSingleBeginType() const                   { return isSingleType() || isBeginType(); }
+      bool isSingleEndType() const                     { return isSingleType() || isEndType(); }
+      bool isMiddleType() const                        { return spannerSegmentType() == SpannerSegmentType::MIDDLE; }
+      bool isEndType() const                           { return spannerSegmentType() == SpannerSegmentType::END;    }
 
       void setSystem(System* s);
       System* system() const                { return (System*)parent();   }
@@ -87,6 +93,7 @@ class SpannerSegment : public Element {
       virtual bool isSpannerSegment() const override { return true; }
       virtual QString accessibleInfo() const override;
       virtual void styleChanged() override;
+      virtual void triggerLayout() const override;
       };
 
 //----------------------------------------------------------------------------------
@@ -158,6 +165,9 @@ class Spanner : public Element {
       const QList<SpannerSegment*>& spannerSegments() const { return segments; }
       QList<SpannerSegment*>& spannerSegments()             { return segments; }
 
+      virtual void layoutSystem(System*);
+
+      virtual void triggerLayout() const override;
       virtual void add(Element*) override;
       virtual void remove(Element*) override;
       virtual void scanElements(void* data, void (*func)(void*, Element*), bool all=true) override;

@@ -41,7 +41,7 @@ int BarLine::_origSpanTo;
 //   BarLineTable
 //---------------------------------------------------------
 
-static const BarLineTableItem barLineTable[] {
+const std::vector<BarLineTableItem> BarLine::barLineTable {
       { BarLineType::NORMAL,           QT_TRANSLATE_NOOP("Palette", "Normal barline"),   "normal" },
       { BarLineType::DOUBLE,           QT_TRANSLATE_NOOP("Palette", "Double barline"),   "double" },
       { BarLineType::START_REPEAT,     QT_TRANSLATE_NOOP("Palette", "Start repeat"),     "start-repeat" },
@@ -58,7 +58,7 @@ static const BarLineTableItem barLineTable[] {
 
 const BarLineTableItem* BarLine::barLineTableItem(unsigned i)
       {
-      if (i >= sizeof(barLineTable)/sizeof(*barLineTable))
+      if (i >= barLineTable.size())
             return 0;
       return &barLineTable[i];
       }
@@ -1166,7 +1166,7 @@ bool BarLine::setProperty(P_ID id, const QVariant& v)
                   return Element::setProperty(id, v);
             }
       setGenerated(false);
-      score()->setLayoutAll();
+      triggerLayout();
       return true;
       }
 
@@ -1272,10 +1272,11 @@ QString BarLine::accessibleExtraInfo() const
                   for (const Element* e : nextM->el()) {
                         if (!score()->selectionFilter().canSelect(e))
                               continue;
-                        if (e->isMarker())
+                        if (e->isMarker()) {
                               if (toMarker(e)->markerType() == Marker::Type::FINE)
                                     continue; //added above^
                               rez = QString("%1 %2").arg(rez).arg(e->screenReaderInfo());
+                              }
                         }
                   }
             }

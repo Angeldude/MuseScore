@@ -176,7 +176,7 @@
         <Rest>
           <lid>8</lid>
           <durationType>measure</durationType>
-          <duration z="4" n="4"/>
+          <duration>4/4</duration>
           </Rest>
         <BarLine>
           <subtype>end</subtype>
@@ -235,7 +235,7 @@
         <Rest>
           <lid>21</lid>
           <durationType>measure</durationType>
-          <duration z="4" n="4"/>
+          <duration>4/4</duration>
           </Rest>
         <BarLine>
           <subtype>end</subtype>
@@ -299,7 +299,7 @@
             </StaffType>
           <bracket type="-1" span="0"/>
           </Staff>
-        <trackName></trackName>
+        <trackName>Flute</trackName>
         <Instrument>
           <longName>Flute</longName>
           <shortName>Fl.</shortName>
@@ -376,7 +376,7 @@
           <Rest>
             <lid>8</lid>
             <durationType>measure</durationType>
-            <duration z="4" n="4"/>
+            <duration>4/4</duration>
             </Rest>
           <BarLine>
             <subtype>end</subtype>
@@ -442,7 +442,7 @@
             </StaffType>
           <bracket type="-1" span="0"/>
           </Staff>
-        <trackName></trackName>
+        <trackName>Alto Saxophone</trackName>
         <Instrument>
           <longName>Alto Saxophone</longName>
           <shortName>A. Sax.</shortName>
@@ -532,7 +532,7 @@
           <Rest>
             <lid>21</lid>
             <durationType>measure</durationType>
-            <duration z="4" n="4"/>
+            <duration>4/4</duration>
             </Rest>
           <BarLine>
             <subtype>end</subtype>

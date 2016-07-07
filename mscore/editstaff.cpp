@@ -55,12 +55,6 @@ EditStaff::EditStaff(Staff* s, int /*tick*/, QWidget* parent)
       setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
       setModal(true);
 
-      const QIcon &editIcon = *icons[int(Icons::edit_ICON)];
-      minPitchASelect->setIcon(editIcon);
-      maxPitchASelect->setIcon(editIcon);
-      minPitchPSelect->setIcon(editIcon);
-      maxPitchPSelect->setIcon(editIcon);
-
       Part* part        = orgStaff->part();
       instrument        = *part->instrument(/*tick*/);
       Score* score      = part->score();
@@ -346,9 +340,9 @@ void EditStaff::apply()
 void EditStaff::minPitchAClicked()
       {
       int         newCode;
-      EditPitch* ep = new EditPitch(this, instrument.minPitchA() );
-      ep->setWindowModality(Qt::WindowModal);
-      if ( (newCode=ep->exec()) != -1) {
+      EditPitch ep(this, instrument.minPitchA());
+      ep.setWindowModality(Qt::WindowModal);
+      if ( (newCode = ep.exec()) != -1) {
             minPitchA->setText(midiCodeToStr(newCode));
             _minPitchA = newCode;
             }
@@ -357,9 +351,9 @@ void EditStaff::minPitchAClicked()
 void EditStaff::maxPitchAClicked()
       {
       int         newCode;
-      EditPitch* ep = new EditPitch(this, instrument.maxPitchA() );
-      ep->setWindowModality(Qt::WindowModal);
-      if ( (newCode=ep->exec()) != -1) {
+      EditPitch ep(this, instrument.maxPitchA());
+      ep.setWindowModality(Qt::WindowModal);
+      if ( (newCode = ep.exec()) != -1) {
             maxPitchA->setText(midiCodeToStr(newCode));
             _maxPitchA = newCode;
             }
@@ -368,9 +362,9 @@ void EditStaff::maxPitchAClicked()
 void EditStaff::minPitchPClicked()
       {
       int         newCode;
-      EditPitch* ep = new EditPitch(this, instrument.minPitchP() );
-      ep->setWindowModality(Qt::WindowModal);
-      if ( (newCode=ep->exec()) != -1) {
+      EditPitch ep(this, instrument.minPitchP());
+      ep.setWindowModality(Qt::WindowModal);
+      if ( (newCode = ep.exec()) != -1) {
             minPitchP->setText(midiCodeToStr(newCode));
             _minPitchP = newCode;
             }
@@ -379,9 +373,9 @@ void EditStaff::minPitchPClicked()
 void EditStaff::maxPitchPClicked()
       {
       int         newCode;
-      EditPitch* ep = new EditPitch(this, instrument.maxPitchP() );
-      ep->setWindowModality(Qt::WindowModal);
-      if ( (newCode=ep->exec()) != -1) {
+      EditPitch ep(this, instrument.maxPitchP());
+      ep.setWindowModality(Qt::WindowModal);
+      if ( (newCode = ep.exec()) != -1) {
             maxPitchP->setText(midiCodeToStr(newCode));
             _maxPitchP = newCode;
             }

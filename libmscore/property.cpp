@@ -60,7 +60,7 @@ static const PropertyData propertyList[] = {
       { P_ID::STEM_DIRECTION,      true,  "StemDirection", P_TYPE::DIRECTION },
 
       { P_ID::NO_STEM,             false, "noStem",        P_TYPE::INT },
-      { P_ID::SLUR_DIRECTION,      false, "slurDirection", P_TYPE::INT },
+      { P_ID::SLUR_DIRECTION,      false, "slurDirection", P_TYPE::DIRECTION },
       { P_ID::LEADING_SPACE,       false, "leadingSpace",  P_TYPE::SPATIUM },
       { P_ID::DISTRIBUTE,          false, "distribute",    P_TYPE::BOOL },
       { P_ID::MIRROR_HEAD,         false, "mirror",        P_TYPE::DIRECTION_H },
@@ -232,16 +232,18 @@ static const PropertyData propertyList[] = {
 
       { P_ID::GLISSANDO_STYLE,     false, "glissandoStyle",        P_TYPE::GLISSANDO_STYLE},
 
-//      { P_ID::LAYOUT_MODE,         false, 0,                       P_TYPE::INT },
+      { P_ID::FRET_STRINGS,        false, "strings",               P_TYPE::INT  },
+      { P_ID::FRET_FRETS,          false, "frets",                 P_TYPE::INT  },
+      { P_ID::FRET_BARRE,          false, "barre",                 P_TYPE::INT  },
+      { P_ID::FRET_OFFSET,         false, "fretOffset",            P_TYPE::INT  },
 
-      { P_ID::FRET_STRINGS,        false, "strings",               P_TYPE::INT },
-      { P_ID::FRET_FRETS,          false, "frets",                 P_TYPE::INT },
-      { P_ID::FRET_BARRE,          false, "barre",                 P_TYPE::INT },
-      { P_ID::FRET_OFFSET,         false, "fretOffset",            P_TYPE::INT },
+      { P_ID::SYSTEM_BRACKET,      false, "type",                  P_TYPE::INT  },
+      { P_ID::GAP,                 false, 0,                       P_TYPE::BOOL },
+      { P_ID::AUTOPLACE,           false, 0,                       P_TYPE::BOOL },
+      { P_ID::DASH_LINE_LEN,       false, "dashLineLength",        P_TYPE::REAL },
+      { P_ID::DASH_GAP_LEN,        false, "dashGapLength",         P_TYPE::REAL },
 
-      { P_ID::SYSTEM_BRACKET,      false, "type",           P_TYPE::INT },
-
-      { P_ID::END,                 false, "",               P_TYPE::INT }
+      { P_ID::END,                 false, "",                      P_TYPE::INT  }
       };
 
 //---------------------------------------------------------
@@ -250,9 +252,8 @@ static const PropertyData propertyList[] = {
 
 P_TYPE propertyType(P_ID id)
       {
-          Q_ASSERT( propertyList[int(id)].id == id);
-
-          return propertyList[int(id)].type;
+      Q_ASSERT( propertyList[int(id)].id == id);
+      return propertyList[int(id)].type;
       }
 
 //---------------------------------------------------------
@@ -261,8 +262,8 @@ P_TYPE propertyType(P_ID id)
 
 bool propertyLink(P_ID id)
       {
-          Q_ASSERT( propertyList[int(id)].id == id);
-          return propertyList[int(id)].link;
+      Q_ASSERT( propertyList[int(id)].id == id);
+      return propertyList[int(id)].link;
       }
 
 //---------------------------------------------------------
@@ -271,8 +272,8 @@ bool propertyLink(P_ID id)
 
 const char* propertyName(P_ID id)
       {
-          Q_ASSERT( propertyList[int(id)].id == id);
-          return propertyList[int(id)].name;
+      Q_ASSERT( propertyList[int(id)].id == id);
+      return propertyList[int(id)].name;
       }
 
 //---------------------------------------------------------

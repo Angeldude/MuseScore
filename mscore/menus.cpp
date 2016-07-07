@@ -3,7 +3,7 @@
 //  Linux Music Score Editor
 //  $Id: menus.cpp 5651 2012-05-19 15:57:26Z lasconic $
 //
-//  Copyright (C) 2002-2013 Werner Schweer and others
+//  Copyright (C) 2002-2016 Werner Schweer and others
 //
 //  This program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License version 2.
@@ -17,6 +17,8 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //=============================================================================
+
+// For menus in the menu bar, like File, Edit, and View, see mscore/musescore.cpp
 
 #include "libmscore/score.h"
 #include "palette.h"
@@ -279,8 +281,6 @@ Palette* MuseScore::newAccidentalsPalette(bool basic)
                   AccidentalType::NONE,
                   AccidentalType::SHARP,
                   AccidentalType::FLAT,
-                  AccidentalType::SHARP2,
-                  AccidentalType::FLAT2,
                   AccidentalType::NATURAL
                   };
             for (auto i : types) {
@@ -1012,41 +1012,65 @@ struct TempoPattern {
       QString pattern;
       double f;
       bool relative;
+      bool followText;
+      bool basic;
+      bool masterOnly;
 
-      TempoPattern(const QString& s, double v, bool relative) : pattern(s), f(v), relative(relative) {}
+      TempoPattern(const QString& s, double v, bool r, bool f, bool b, bool m) : pattern(s), f(v), relative(r), followText(f), basic(b), masterOnly(m) {}
       };
 
 //---------------------------------------------------------
 //   newTempoPalette
 //---------------------------------------------------------
 
-Palette* MuseScore::newTempoPalette(bool basic)
+Palette* MuseScore::newTempoPalette(bool basic, bool master)
       {
       Palette* sp = new Palette;
       sp->setName(QT_TRANSLATE_NOOP("Palette", "Tempo"));
       sp->setMag(0.65);
-      sp->setGrid(60, 30);
+      if (master)
+            sp->setGrid(116, 28);
+      else
+            sp->setGrid(66, 28);
       sp->setDrawGrid(true);
 
       static const TempoPattern tps[] = {
-            TempoPattern("<sym>metNoteHalfUp</sym> = 80", 80.0/30.0, false),                    // 1/2
-            TempoPattern("<sym>metNoteQuarterUp</sym> = 80", 80.0/60.0, false),                 // 1/4
-            TempoPattern("<sym>metNote8thUp</sym> = 80", 80.0/120.0, false),                    // 1/8
-            TempoPattern("<sym>metNoteHalfUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = 80", 120/30.0, false),       // dotted 1/2
-            TempoPattern("<sym>metNoteQuarterUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = 80", 120/60.0, false),    // dotted 1/4
-            TempoPattern("<sym>metNote8thUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = 80", 120/120.0, false),       // dotted 1/8
-            TempoPattern("<sym>metNoteQuarterUp</sym> = <sym>metNoteQuarterUp</sym><sym>space</sym><sym>metAugmentationDot</sym>", 3.0/2.0, true),
-            TempoPattern("<sym>metNoteQuarterUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = <sym>metNoteQuarterUp</sym>", 2.0/3.0, true),
-            TempoPattern("<sym>metNoteHalfUp</sym> = <sym>metNoteQuarterUp</sym>", 1.0/2.0, true),
-            TempoPattern("<sym>metNoteQuarterUp</sym> = <sym>metNoteHalfUp</sym>", 2.0/1.0, true),
-            TempoPattern("<sym>metNote8thUp</sym> = <sym>metNote8thUp</sym>", 1.0/1.0, true),
-            TempoPattern("<sym>metNoteQuarterUp</sym> = <sym>metNoteQuarterUp</sym>", 1.0/1.0, true),
+            TempoPattern("<sym>metNoteHalfUp</sym> = 80",    80.0/ 30.0, false, true, true, false),                // 1/2
+            TempoPattern("<sym>metNoteQuarterUp</sym> = 80", 80.0/ 60.0, false, true, true, false),                // 1/4
+            TempoPattern("<sym>metNote8thUp</sym> = 80",     80.0/120.0, false, true, true, false),                // 1/8
+            TempoPattern("<sym>metNoteHalfUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = 80",    120/ 30.0, false, true, false, false),   // dotted 1/2
+            TempoPattern("<sym>metNoteQuarterUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = 80", 120/ 60.0, false, true, true, false),   // dotted 1/4
+            TempoPattern("<sym>metNote8thUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = 80",     120/120.0, false, true, false, false),   // dotted 1/8
+
+            TempoPattern("Grave",             35.0/60.0, false, false, false, false),
+            TempoPattern("Largo",             50.0/60.0, false, false, false, false),
+            TempoPattern("Lento",             52.5/60.0, false, false, false, false),
+            TempoPattern("Larghetto",         63.0/60.0, false, false, false, true),
+            TempoPattern("Adagio",            71.0/60.0, false, false, false, false),
+            TempoPattern("Andante",           92.0/60.0, false, false, false, false),
+            TempoPattern("Andantino",         94.0/60.0, false, false, false, true),
+            TempoPattern("Moderato",         114.0/60.0, false, false, false, false),
+            TempoPattern("Allegretto",       116.0/60.0, false, false, false, false),
+            TempoPattern("Allegro moderato", 118.0/60.0, false, false, false, true),
+            TempoPattern("Allegro",          144.0/60.0, false, false, false, false),
+            TempoPattern("Vivace",           172.0/60.0, false, false, false, false),
+            TempoPattern("Presto",           187.0/60.0, false, false, false, false),
+            TempoPattern("Prestissimo",      200.0/60.0, false, false, false, true),
+
+            TempoPattern("<sym>metNoteQuarterUp</sym> = <sym>metNoteQuarterUp</sym><sym>space</sym><sym>metAugmentationDot</sym>", 3.0/2.0, true, true, false, false),
+            TempoPattern("<sym>metNoteQuarterUp</sym><sym>space</sym><sym>metAugmentationDot</sym> = <sym>metNoteQuarterUp</sym>", 2.0/3.0, true, true, false, false),
+            TempoPattern("<sym>metNoteHalfUp</sym> = <sym>metNoteQuarterUp</sym>",    1.0/2.0, true, true, false, false),
+            TempoPattern("<sym>metNoteQuarterUp</sym> = <sym>metNoteHalfUp</sym>",    2.0/1.0, true, true, false, false),
+            TempoPattern("<sym>metNote8thUp</sym> = <sym>metNote8thUp</sym>",         1.0/1.0, true, true, false, false),
+            TempoPattern("<sym>metNoteQuarterUp</sym> = <sym>metNoteQuarterUp</sym>", 1.0/1.0, true, true, false, false),
             };
       for (TempoPattern tp : tps) {
-            if (tp.relative && basic)
+            if (!tp.basic && basic)
+                  continue;
+            if (tp.masterOnly && !master)
                   continue;
             TempoText* tt = new TempoText(gscore);
-            tt->setFollowText(true);
+            tt->setFollowText(tp.followText);
             tt->setXmlText(tp.pattern);
             if (tp.relative) {
                   tt->setRelative(tp.f);
@@ -1293,61 +1317,6 @@ void MuseScore::setBasicPalette()
       paletteBox->addPalette(newBreaksPalette());
       paletteBox->addPalette(newBeamPalette(true));
 //      paletteBox->addPalette(newFramePalette());
-      }
-
-//---------------------------------------------------------
-//   genCreateMenu
-//---------------------------------------------------------
-
-QMenu* MuseScore::genCreateMenu(QWidget* parent)
-      {
-      QMenu* popup = new QMenu(tr("&Add"), parent);
-      popup->setObjectName("Add");
-
-      QMenu* measures = popup->addMenu(tr("&Measures"));
-      measures->addAction(getAction("insert-measure"));
-      measures->addAction(getAction("insert-measures"));
-      measures->addSeparator();
-      measures->addAction(getAction("append-measure"));
-      measures->addAction(getAction("append-measures"));
-
-      QMenu* frames = popup->addMenu(tr("&Frames"));
-      frames->addAction(getAction("insert-hbox"));
-      frames->addAction(getAction("insert-vbox"));
-      frames->addAction(getAction("insert-textframe"));
-      if (enableExperimental)
-            frames->addAction(getAction("insert-fretframe"));
-      frames->addSeparator();
-      frames->addAction(getAction("append-hbox"));
-      frames->addAction(getAction("append-vbox"));
-      frames->addAction(getAction("append-textframe"));
-
-      QMenu* text = popup->addMenu(tr("&Text"));
-      text->addAction(getAction("title-text"));
-      text->addAction(getAction("subtitle-text"));
-      text->addAction(getAction("composer-text"));
-      text->addAction(getAction("poet-text"));
-      text->addAction(getAction("part-text"));
-      text->addSeparator();
-      text->addAction(getAction("system-text"));
-      text->addAction(getAction("staff-text"));
-      text->addAction(getAction("chord-text"));
-      text->addAction(getAction("rehearsalmark-text"));
-      text->addAction(getAction("instrument-change-text"));
-      text->addSeparator();
-      text->addAction(getAction("lyrics"));
-      text->addAction(getAction("figured-bass"));
-      text->addAction(getAction("tempo"));
-
-      QMenu* lines = popup->addMenu(tr("&Lines"));
-      lines->addSeparator();
-      lines->addAction(getAction("add-slur"));
-      lines->addAction(getAction("add-hairpin"));
-      lines->addAction(getAction("add-hairpin-reverse"));
-      lines->addAction(getAction("add-8va"));
-      lines->addAction(getAction("add-8vb"));
-      lines->addAction(getAction("add-noteline"));
-      return popup;
       }
 
 //---------------------------------------------------------

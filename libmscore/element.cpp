@@ -281,6 +281,7 @@ Element::Element(Score* s) :
       _mag           = 1.0;
       _tag           = 1;
       itemDiscovered = false;
+      _autoplace     = true;
       }
 
 Element::Element(const Element& e)
@@ -301,6 +302,7 @@ Element::Element(const Element& e)
       _bbox       = e._bbox;
       _tag        = e._tag;
       itemDiscovered = false;
+      _autoplace  = e._autoplace;
       }
 
 //---------------------------------------------------------
@@ -342,8 +344,7 @@ void Element::scanElements(void* data, void (*func)(void*, Element*), bool all)
 
 void Element::reset()
       {
-      if (!_userOff.isNull())
-            score()->undoChangeProperty(this, P_ID::USER_OFF, QPointF());
+      undoChangeProperty(P_ID::AUTOPLACE, propertyDefault(P_ID::AUTOPLACE));
       }
 
 //---------------------------------------------------------
@@ -641,12 +642,15 @@ bool Element::intersects(const QRectF& rr) const
 
 void Element::writeProperties(Xml& xml) const
       {
-      //copy paste should not keep links
+      // copy paste should not keep links
       if (_links && (_links->size() > 1) && !xml.clipboardmode)
             xml.tag("lid", _links->lid());
-      if (!userOff().isNull()) {
+      if (!_autoplace && !userOff().isNull()) {
             if (type() == Element::Type::VOLTA_SEGMENT
-                || type() == Element::Type::GLISSANDO_SEGMENT || isChordRest()
+                || type() == Element::Type::GLISSANDO_SEGMENT
+                || isChordRest()
+                || isRehearsalMark()
+                || isDynamic()
                 || type() == Element::Type::SYSTEM_DIVIDER
                 || (xml.clipboardmode && isSLineSegment()))
                   xml.tag("offset", userOff() / spatium());
@@ -687,8 +691,10 @@ bool Element::readProperties(XmlReader& e)
             setVisible(e.readInt());
       else if (tag == "selected") // obsolete
             e.readInt();
-      else if (tag == "userOff")
+      else if (tag == "userOff") {
             _userOff = e.readPoint();
+            _autoplace = false;
+            }
       else if (tag == "lid") {
             int id = e.readInt();
             _links = e.linkIds().value(id);
@@ -714,35 +720,17 @@ bool Element::readProperties(XmlReader& e)
             }
       else if (tag == "tick") {
             int val = e.readInt();
-            // certain elements should not be allowed to reset tick
-            // these include any elements that occur within context of a Chord in a 1.X score
-            if (val >= 0) {
-                  // if tick is valid, we should honor it
-                  // but there are certain cases where we cannot
-                  // - in 1.X scores, copy & paste of gliss resulted in invalid tick value on the new copy (#21211)
-                  //   the tick is not needed for glissandi anyhow, so we can ignore it
-                  // - another bug allowed text items attached to notes or chords to also have invalid tick values (#25616)
-                  //   the text might be of any type, but we are now converting any text elements within notes into FINGERING
-                  // - another bug allowed copy & paste of symbols attached to notes to produce invalid tick values (#56146)
-                  //   we can't ignore tick for all symbols, because it is needed for correct positioning of symbols attached to measures
-                  //   and it also can be relied upon by subsequent elements (http://musescore.org/en/node/25572)
-                  //   so honor tick only for elements attached to measures
-                  //   symbols attached to notes or other elements don't need the tick anyhow
-                  if (score()->mscVersion() <= 114 && type() == Element::Type::SYMBOL) {
-                        if (!parent() || parent()->type() != Element::Type::MEASURE)
-                              val = -1;
-                        }
-                  if (score()->mscVersion() > 114 || (type() != Element::Type::GLISSANDO && type() != Element::Type::FINGERING && val >= 0))
-                        e.initTick(score()->fileDivision(val));
-                  }
+            if (val >= 0)
+                  e.initTick(score()->fileDivision(val));
             }
       else if (tag == "offset") {
             setUserOff(e.readPoint() * spatium());
+            _autoplace = false;
             }
       else if (tag == "pos") {
             QPointF pt = e.readPoint();
-            if (score()->mscVersion() > 114)
-                  _readPos = pt * score()->spatium();
+            _readPos = pt * score()->spatium();
+            _autoplace = false;
             }
       else if (tag == "voice")
             setTrack((_track/VOICES)*VOICES + e.readInt());
@@ -896,7 +884,7 @@ void StaffLines::layout()
             setColor(MScore::defaultColor);
             }
       lw = score()->styleS(StyleIdx::staffLineWidth).val() * _spatium;
-      bbox().setRect(0.0, -lw*.5, width(), lines * dist + lw);
+      bbox().setRect(0.0, -lw*.5, measure()->width(), (lines-1) * dist + lw);
       }
 
 //---------------------------------------------------------
@@ -1177,8 +1165,8 @@ QByteArray Element::mimeData(const QPointF& dragOffset) const
       Xml xml(&buffer);
       xml.clipboardmode = true;
       xml.stag("Element");
-      if (type() == Element::Type::NOTE)
-            xml.fTag("duration", static_cast<const Note*>(this)->chord()->duration());
+      if (isNote())
+            xml.tag("duration", toNote(this)->chord()->duration());
       if (!dragOffset.isNull())
             xml.tag("dragOffset", dragOffset);
       write(xml);
@@ -1446,7 +1434,7 @@ void collectElements(void* data, Element* e)
 
 void Element::undoSetPlacement(Placement v)
       {
-      score()->undoChangeProperty(this, P_ID::PLACEMENT, int(v));
+      undoChangeProperty(P_ID::PLACEMENT, int(v));
       }
 
 //---------------------------------------------------------
@@ -1463,6 +1451,7 @@ QVariant Element::getProperty(P_ID propertyId) const
             case P_ID::SELECTED:  return _selected;
             case P_ID::USER_OFF:  return _userOff;
             case P_ID::PLACEMENT: return int(_placement);
+            case P_ID::AUTOPLACE: return autoplace();
             default:
                   return QVariant();
             }
@@ -1497,13 +1486,16 @@ bool Element::setProperty(P_ID propertyId, const QVariant& v)
             case P_ID::PLACEMENT:
                   _placement = Placement(v.toInt());
                   break;
+            case P_ID::AUTOPLACE:
+                  setAutoplace(v.toBool());
+                  break;
             default:
                   qFatal("Element::setProperty: unknown <%s>(%d), data <%s>",
                      propertyName(propertyId), static_cast<int>(propertyId), qPrintable(v.toString()));
                   return false;
             }
+      score()->setLayout(tick());
       setGenerated(false);
-      score()->addRefresh(canvasBoundingRect());
       return true;
       }
 
@@ -1526,6 +1518,8 @@ QVariant Element::propertyDefault(P_ID id) const
                   return false;
             case P_ID::USER_OFF:
                   return QPointF();
+            case P_ID::AUTOPLACE:
+                  return true;
             default:    // not all properties have a default
                   break;
             }
@@ -1536,9 +1530,20 @@ QVariant Element::propertyDefault(P_ID id) const
 //   undoChangeProperty
 //---------------------------------------------------------
 
-void Element::undoChangeProperty(P_ID id, const QVariant& v)
+void Element::undoChangeProperty(P_ID id, const QVariant& v, PropertyStyle ps)
       {
-      score()->undoChangeProperty(this, id, v);
+      if (id == P_ID::AUTOPLACE && v.toBool()) {
+            // special case: if we switch to autoplace, we must save
+            // user offset values
+            undoResetProperty(P_ID::USER_OFF);
+            if (isSlurSegment()) {
+                  undoResetProperty(P_ID::SLUR_UOFF1);
+                  undoResetProperty(P_ID::SLUR_UOFF2);
+                  undoResetProperty(P_ID::SLUR_UOFF3);
+                  undoResetProperty(P_ID::SLUR_UOFF4);
+                  }
+            }
+      score()->undoChangeProperty(this, id, v, ps);
       }
 
 //---------------------------------------------------------
@@ -1566,7 +1571,7 @@ bool Element::custom(P_ID id) const
 
 void Element::undoResetProperty(P_ID id)
       {
-      score()->undoChangeProperty(this, id, propertyDefault(id));
+      undoChangeProperty(id, propertyDefault(id));
       }
 
 //---------------------------------------------------------
@@ -1667,7 +1672,7 @@ Element* Element::findMeasure()
 
 void Element::undoSetColor(const QColor& c)
       {
-      score()->undoChangeProperty(this, P_ID::COLOR, c);
+      undoChangeProperty(P_ID::COLOR, c);
       }
 
 //---------------------------------------------------------
@@ -1676,7 +1681,7 @@ void Element::undoSetColor(const QColor& c)
 
 void Element::undoSetVisible(bool v)
       {
-      score()->undoChangeProperty(this, P_ID::VISIBLE, v);
+      undoChangeProperty(P_ID::VISIBLE, v);
       }
 
 //---------------------------------------------------------
@@ -1712,7 +1717,7 @@ QPointF Element::scriptPos() const
 
 void Element::scriptSetPos(const QPointF& p)
       {
-      score()->undoChangeProperty(this, P_ID::USER_OFF, p*spatium() - ipos());
+      undoChangeProperty(P_ID::USER_OFF, p*spatium() - ipos());
       }
 
 QPointF Element::scriptUserOff() const
@@ -1722,7 +1727,7 @@ QPointF Element::scriptUserOff() const
 
 void Element::scriptSetUserOff(const QPointF& o)
       {
-      score()->undoChangeProperty(this, P_ID::USER_OFF, o * spatium());
+      undoChangeProperty(P_ID::USER_OFF, o * spatium());
       }
 
 //void Element::draw(SymId id, QPainter* p) const { score()->scoreFont()->draw(id, p, magS()); }
@@ -2062,6 +2067,15 @@ int Element::rtick() const
             e = e->parent();
             }
       return -1;
+      }
+
+//---------------------------------------------------------
+//   triggerLayout
+//---------------------------------------------------------
+
+void Element::triggerLayout() const
+      {
+      score()->setLayout(tick());
       }
 
 }

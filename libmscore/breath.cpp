@@ -45,6 +45,10 @@ Breath::Breath(Score* s)
 
 void Breath::layout()
       {
+      if (_breathType >= 2)
+            setPos(x(), spatium());
+      else
+            setPos(x(), -0.5 * spatium());
       setbbox(symBbox(symList[breathType()]));
       }
 
@@ -134,7 +138,7 @@ bool Breath::setProperty(P_ID propertyId, const QVariant& v)
                         return false;
                   break;
             }
-      score()->setLayoutAll();
+      triggerLayout();
       setGenerated(false);
       return true;
       }

@@ -3,7 +3,7 @@
 //  Linux Music Score Editor
 //  $Id: preferences.cpp 5660 2012-05-22 14:17:39Z wschweer $
 //
-//  Copyright (C) 2002-2011 Werner Schweer and others
+//  Copyright (C) 2002-2016 Werner Schweer and others
 //
 //  This program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License version 2.
@@ -542,26 +542,11 @@ void MuseScore::startPreferenceDialog()
 //---------------------------------------------------------
 
 PreferenceDialog::PreferenceDialog(QWidget* parent)
-   : QDialog(parent)
+   : AbstractDialog(parent)
       {
       setupUi(this);
       setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
       setModal(true);
-      startWithButton->setIcon(*icons[int(Icons::fileOpen_ICON)]);
-      instrumentList1Button->setIcon(*icons[int(Icons::fileOpen_ICON)]);
-      instrumentList2Button->setIcon(*icons[int(Icons::fileOpen_ICON)]);
-      defaultStyleButton->setIcon(*icons[int(Icons::fileOpen_ICON)]);
-      partStyleButton->setIcon(*icons[int(Icons::fileOpen_ICON)]);
-      myScoresButton->setIcon(*icons[int(Icons::fileOpen_ICON)]);
-      myStylesButton->setIcon(*icons[int(Icons::fileOpen_ICON)]);
-      myTemplatesButton->setIcon(*icons[int(Icons::fileOpen_ICON)]);
-      myPluginsButton->setIcon(*icons[int(Icons::fileOpen_ICON)]);
-      mySoundfontsButton->setIcon(*icons[int(Icons::edit_ICON)]);
-      myImagesButton->setIcon(*icons[int(Icons::fileOpen_ICON)]);
-
-      bgWallpaperSelect->setIcon(*icons[int(Icons::fileOpen_ICON)]);
-      fgWallpaperSelect->setIcon(*icons[int(Icons::fileOpen_ICON)]);
-      styleFileButton->setIcon(*icons[int(Icons::fileOpen_ICON)]);
       shortcutsChanged        = false;
 
 #ifndef USE_JACK
@@ -648,9 +633,6 @@ PreferenceDialog::PreferenceDialog(QWidget* parent)
       for (int idx = 0; idx < n; ++idx)
             exportAudioSampleRate->addItem(QString("%1").arg(exportAudioSampleRates[idx]));
 
-      restartWarningLanguage->setText("");
-      connect(language, SIGNAL(currentIndexChanged(int)), SLOT(languageChanged(int)));
-
       connect(recordButtons,          SIGNAL(buttonClicked(int)), SLOT(recordButtonClicked(int)));
       connect(midiRemoteControlClear, SIGNAL(clicked()), SLOT(midiRemoteControlClearClicked()));
       connect(portaudioDriver, SIGNAL(toggled(bool)), SLOT(exclusiveAudioDriver(bool)));
@@ -679,16 +661,6 @@ void PreferenceDialog::setPreferences(const Preferences& p)
 PreferenceDialog::~PreferenceDialog()
       {
       qDeleteAll(localShortcuts);
-      }
-
-
-//---------------------------------------------------------
-//   recordButtonClicked
-//---------------------------------------------------------
-
-void PreferenceDialog::languageChanged(int /*val*/)
-      {
-      restartWarningLanguage->setText(tr("The language will be changed once you restart MuseScore."));
       }
 
 //---------------------------------------------------------
